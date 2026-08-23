@@ -11,7 +11,7 @@ Crear un sistema para que un/a médico veterinario pueda hacer agentamiento de c
 # Stack:
 - C Language
 - PostgreSQL
-- CMake
+- CMake Ninja Build
 
 # ¿Quieres utilizar el sistema en una página ya creada? 
 - TODO: Página.
