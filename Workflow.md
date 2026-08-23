@@ -14,14 +14,14 @@ CMAKE
 
 - Problemas:
 ---
-
----
 Base de datos
 ---
+
 
 ---
 Operaciones SQL
 ---
+
 
 ---
 API's
