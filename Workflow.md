@@ -1,4 +1,4 @@
-# Manejo de flujo de trabajo (Recordar ponerlo en .gitignore)
+# Manejo de flujo de trabajo (Recordar ponerlo en .gitignore al llegar a base de datos.)
 
 ### Pasos a seguir.
 - Crear build para CMake.
