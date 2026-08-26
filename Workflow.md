@@ -32,5 +32,9 @@
     -
 
 ---
-### API's
+### Inicializar objetos
+- Tutor
 
+
+---
+### API's
