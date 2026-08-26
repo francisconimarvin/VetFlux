@@ -15,13 +15,21 @@
 - Problemas:
 ---
 ### Base de datos
+- Conexión a base de datos:
+    - Realizada.
+    - Ajustes: Cambio de nombre, actualización de versión.
 
+- Mantener conexión:
+    -
 
+- Hacer operaciones en la base de datos:
+    -
 
----
-### Operaciones SQL
+- Lograr gestionar el permiso de acceso para usuarios y administrador:
+    -
 
-
+- Seguridad:
+    -
 
 ---
 ### API's

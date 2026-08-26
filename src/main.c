@@ -9,14 +9,14 @@ int main(void) {
     /* You should create a .pgpass
      * Read the PG Documentation regarding passfiles.
      * */
-    const char *conninfo = "dbname=Veterinaria user=marvin";
+    const char *conninfo = "dbname=VetFlux user=marvin";
     PGconn *conn = db_connect(conninfo);
 
     if (conn==NULL) {
         return 1;
     }
 
-
+    printf("Connected to database: %s\n", PQdb(conn));
     PQfinish(conn);
     return 0;
 }
