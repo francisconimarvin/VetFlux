@@ -1,5 +1,4 @@
 # VetFlux: Sistema individual para médicos veterinarios.
-### The Flux Company ®
 ### Creado por: Marvin Francisconi, 2026.
 ### Versión: 1.0.0
 ### Licencia: [MIT](LICENSE)
@@ -17,3 +16,6 @@
 # ¿Quieres utilizar el sistema en una página ya creada? 
 - TODO: Página.
 Contáctame aquí:
+
+### The Flux Company ®
+
