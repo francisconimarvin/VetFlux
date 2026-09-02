@@ -17,7 +17,6 @@ int main(void) {
     }
 
     printf("Connected to database: %s\n", PQdb(conn));
-    PQfinish(conn);
     return 0;
 }
 

@@ -5,6 +5,14 @@
 
 void menu_Tutor(PGconn *conn);
 
+typedef struct {
+    char rut[13];
+    char nombre[101];
+    char telefono[10];
+    char email[101];
+    char domicilio[101];
+} Tutor;
+
 // CRUD
 void create_Tutor(PGconn *conn);
 void read_Tutor(PGconn *conn);

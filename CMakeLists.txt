@@ -4,7 +4,6 @@ add_executable(VetFlux)
 
 find_package(PostgreSQL 18.4)
 
-add_library(vetlib)
 target_sources(VetFlux
     PRIVATE
        src/main.c
