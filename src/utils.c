@@ -5,6 +5,8 @@
 
 void input_string(char *buffer, size_t size) {
     fgets(buffer, size, stdin);
-    buffer[strcspn(buffer, "\n")] = '\0';
+    if (fgets(buffer, size, stdin) != NULL) {
+        buffer[strcspn(buffer, "\n")] = '\0';
+    }
 };
 

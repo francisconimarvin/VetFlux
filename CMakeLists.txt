@@ -8,6 +8,8 @@ target_sources(VetFlux
     PRIVATE
        src/main.c
        src/db.c
+       src/utils.c
+       src/tutor.c
 )
 
 target_include_directories(VetFlux PUBLIC

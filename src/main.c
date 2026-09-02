@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "libpq-fe.h"
+#include "tutor.h"
 
 PGconn *db_connect(const char *conninfo);
 
@@ -17,6 +18,8 @@ int main(void) {
     }
 
     printf("Connected to database: %s\n", PQdb(conn));
+    create_Tutor(conn); 
+
     return 0;
 }
 
