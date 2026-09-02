@@ -17,8 +17,10 @@ int main(void) {
         return 1;
     }
 
+    PQsetClientEncoding(conn, "UTF8");
     printf("Connected to database: %s\n", PQdb(conn));
-    create_Tutor(conn); 
+    create_Tutor(conn);
+    delete_Tutor(conn); 
 
     return 0;
 }

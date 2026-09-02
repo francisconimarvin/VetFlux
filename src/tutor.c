@@ -6,7 +6,7 @@
 #include "utils.h"
 
 // Create tutor
-void create_Tutor(PGconn *conn){
+void create_Tutor(PGconn *conn) {
     Tutor tutor;
 
     printf("RUT: ");
@@ -56,4 +56,35 @@ void create_Tutor(PGconn *conn){
     PQclear(insert);
 }
 
+// Delete tutor (USING PK)
+void delete_Tutor(PGconn *conn) {
+    Tutor tutor;
 
+    printf("RUT de tutor a eliminar: ");
+    input_string(tutor.rut, sizeof(tutor.rut));
+    
+    const char *rut[] = {
+        tutor.rut
+    };
+
+    PGresult *delete = PQexecParams(
+        conn,
+        "DELETE FROM tutor "
+        "   WHERE rut = $1",
+        1,
+        NULL,
+        rut,
+        NULL,
+        NULL,
+        0
+    );
+    
+    if (PQresultStatus(delete) == PGRES_COMMAND_OK) {
+        printf("Tutor borrado correctamente.\n");
+    }
+    else {
+        fprintf(stderr, "Error al borrar tutor: %s\n", PQerrorMessage(conn));
+    }
+
+    PQclear(delete);
+}
