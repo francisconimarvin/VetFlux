@@ -34,7 +34,10 @@
 ---
 ### Inicializar objetos
 - Tutor
-
+    - Insert
+    - Delete
+    - Select
+    - Update  
 
 ---
 ### API's
