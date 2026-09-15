@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <libpq-fe.h>
-
 #include "tutor.h"
 #include "utils.h"
 
