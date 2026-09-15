@@ -131,11 +131,10 @@ void read_Tutor(PGconn *conn) {
 void update_Tutor(PGconn *conn)
 {
     Tutor tutor;
-    char rut[13];
     int option;
 
     printf("RUT del tutor a modificar: ");
-    input_string(rut, sizeof(rut));
+    input_string(tutor.rut, sizeof(tutor.rut));
 
     printf("\nElija una opción a modificar:\n");
     printf("1. Nombre\n");
@@ -146,10 +145,12 @@ void update_Tutor(PGconn *conn)
 
     printf("Opción: ");
     scanf("%d", &option);
+    getchar();
 
     switch (option)
     {
         case 1:
+        {
             printf("Modificar nombre: ");
             input_string(tutor.nombre, sizeof(tutor.nombre));
 
@@ -169,12 +170,124 @@ void update_Tutor(PGconn *conn)
                 0
             );
 
+            if (PQresultStatus(update) != PGRES_COMMAND_OK)
+            {
+                fprintf(stderr, "Error al modificar nombre: %s\n",
+                        PQerrorMessage(conn));
+            }
+            else
+            {
+                printf("Nombre modificado correctamente.\n");
+            }
+
             PQclear(update);
             break;
+        }
 
-        // case 2...
-        // case 3...
-        // case 4...
+        case 2:
+        {
+            printf("Modificar teléfono: ");
+            input_string(tutor.telefono, sizeof(tutor.telefono));
+
+            const char *values[] = {
+                tutor.telefono,
+                rut
+            };
+
+            PGresult *update = PQexecParams(
+                conn,
+                "UPDATE tutor SET telefono = $1 WHERE rut = $2",
+                2,
+                NULL,
+                values,
+                NULL,
+                NULL,
+                0
+            );
+
+            if (PQresultStatus(update) != PGRES_COMMAND_OK)
+            {
+                fprintf(stderr, "Error al modificar teléfono: %s\n",
+                        PQerrorMessage(conn));
+            }
+            else
+            {
+                printf("Teléfono modificado correctamente.\n");
+            }
+
+            PQclear(update);
+            break;
+        }
+
+        case 3:
+        {
+            printf("Modificar email: ");
+            input_string(tutor.email, sizeof(tutor.email));
+
+            const char *values[] = {
+                tutor.email,
+                rut
+            };
+
+            PGresult *update = PQexecParams(
+                conn,
+                "UPDATE tutor SET email = $1 WHERE rut = $2",
+                2,
+                NULL,
+                values,
+                NULL,
+                NULL,
+                0
+            );
+
+            if (PQresultStatus(update) != PGRES_COMMAND_OK)
+            {
+                fprintf(stderr, "Error al modificar email: %s\n",
+                        PQerrorMessage(conn));
+            }
+            else
+            {
+                printf("Email modificado correctamente.\n");
+            }
+
+            PQclear(update);
+            break;
+        }
+
+        case 4:
+        {
+            printf("Modificar domicilio: ");
+            input_string(tutor.domicilio, sizeof(tutor.domicilio));
+
+            const char *values[] = {
+                tutor.domicilio,
+                rut
+            };
+
+            PGresult *update = PQexecParams(
+                conn,
+                "UPDATE tutor SET domicilio = $1 WHERE rut = $2",
+                2,
+                NULL,
+                values,
+                NULL,
+                NULL,
+                0
+            );
+
+            if (PQresultStatus(update) != PGRES_COMMAND_OK)
+            {
+                fprintf(stderr, "Error al modificar domicilio: %s\n",
+                        PQerrorMessage(conn));
+            }
+            else
+            {
+                printf("Domicilio modificado correctamente.\n");
+            }
+
+            PQclear(update);
+            break;
+        }
 
         case 5:
             return;
@@ -182,6 +295,5 @@ void update_Tutor(PGconn *conn)
         default:
             printf("Opción inválida.\n");
             break;
-        
     }
 }

@@ -21,7 +21,8 @@ int main(void) {
     printf("Connected to database: %s\n", PQdb(conn));
     // create_Tutor(conn);
     // delete_Tutor(conn); 
-    read_Tutor(conn);
+    // read_Tutor(conn);
+    update_Tutor(conn);
     return 0;
 }
 

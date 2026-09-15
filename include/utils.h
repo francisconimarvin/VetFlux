@@ -3,9 +3,10 @@
 
 #include <stddef.h>
 
-// Aquí voy a meter mierda útil
 
 // Función para obtener una entrada de carácteres sin newline
 void input_string(char *buffer, size_t size);
+
+// Función para confirmar el formato del rut
 
 #endif

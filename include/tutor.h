@@ -6,7 +6,7 @@
 void menu_Tutor(PGconn *conn);
 
 typedef struct {
-    char rut[14];
+    char rut[15];
     char nombre[101];
     char telefono[11];
     char email[101];
