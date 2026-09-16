@@ -8,3 +8,4 @@ void input_string(char *buffer, size_t size) {
     buffer[strcspn(buffer, "\n")] = '\0';
 };
 
+
