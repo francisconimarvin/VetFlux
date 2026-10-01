@@ -13,7 +13,7 @@
 - C Language 202311L (23) 
 - GCC Compiler 16.1.1
 - PostgreSQL
-- CMake Ninja Build
+- CMake
 
 # ¿Quieres utilizar el sistema en una página ya creada? 
 - TODO: Página.
