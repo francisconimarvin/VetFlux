@@ -11,7 +11,7 @@
 
 # Stack:
 - C Language 202311L (23) 
-- GCC Compiler 16.1.1
+- GCC Compiler 16.2.1
 - PostgreSQL
 - CMake
 
