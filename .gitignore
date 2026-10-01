@@ -1,2 +1,5 @@
 # Ignore sql files
 *.sql
+
+# Ignore build (build your own executable)
+*.build
