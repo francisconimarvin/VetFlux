@@ -15,6 +15,7 @@ target_link_libraries(VetFlux PRIVATE PostgreSQL::PostgreSQL)
 target_sources(VetLibrary
     PRIVATE
         src/db.c
+        src/tutor.c
 
     PUBLIC 
         FILE_SET HEADERS
@@ -23,6 +24,7 @@ target_sources(VetLibrary
             include
         FILES
             include/db.h
+            include/tutor.h
 
     )
 
