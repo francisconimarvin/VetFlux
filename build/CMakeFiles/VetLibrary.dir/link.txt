@@ -1,0 +1,2 @@
+/usr/bin/ar qc libVetLibrary.a CMakeFiles/VetLibrary.dir/src/db.c.o CMakeFiles/VetLibrary.dir/src/tutor.c.o
+/usr/bin/ranlib libVetLibrary.a

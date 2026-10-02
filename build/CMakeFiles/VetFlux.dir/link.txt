@@ -1,0 +1,1 @@
+/usr/bin/cc -Wl,--dependency-file=CMakeFiles/VetFlux.dir/link.d CMakeFiles/VetFlux.dir/src/main.c.o -o VetFlux  /usr/lib/libpq.so libVetLibrary.a
