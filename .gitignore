@@ -2,4 +2,4 @@
 *.sql
 
 # Ignore build
-*.build
+build/
