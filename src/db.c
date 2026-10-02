@@ -31,5 +31,5 @@ PGconn *db_connect(void)
     }
 
     PQclear(res);
-    PQfinish(conn);
+    return conn;
 }
