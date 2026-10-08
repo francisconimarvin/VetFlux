@@ -13,6 +13,7 @@ typedef struct tutor {
 } Tutor;
 
 void createTutor(PGconn *conn);
+void readAllTutor(PGconn *conn);
 void readTutor(PGconn *conn);
 void updateTutor(PGconn *conn);
 void deleteTutor(PGconn *conn);

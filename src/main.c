@@ -7,6 +7,8 @@ int main ()
     PGconn *conn = db_connect();
     
     createTutor(conn);  
+    readAllTutor(conn);
+    readTutor(conn);
     PQfinish(conn);
     return 0;
 
