@@ -50,7 +50,7 @@ void createTutor(PGconn *conn)
             0
             );
 
-     if (PQresultStatus(res) != PGRES_COMMAND_OK)
+    if (PQresultStatus(res) != PGRES_COMMAND_OK)
     {
         fprintf(stderr, "INSERT failed: %s", PQerrorMessage(conn));
     } else {
@@ -135,7 +135,257 @@ void readTutor(PGconn *conn)
        }
        printf("\n");
     }
+    PQclear(res);
+}
 
-    
+void updateTutor(PGconn *conn)
+{
+    Tutor tutor;
+
+    printf("¿Qué quieres actualizar del tutor?\n");
+    printf("1. Nombre\n");
+    printf("2. eMail\n");
+    printf("3. Teléfono\n");
+    printf("4. Domicilio\n");
+
+    int option;
+    scanf("%d", &option);
+
+    getchar();
+    switch (option)
+    {
+        case 1:
+        {
+            printf("RUT del tutor a cambiar el nombre:\n");
+            fgets(tutor.rut, sizeof(tutor.rut), stdin);
+            tutor.rut[strcspn(tutor.rut, "\n")] = '\0';
+
+            printf("Nuevo nombre:\n");
+            fgets(tutor.nombre, sizeof(tutor.nombre), stdin);
+            tutor.nombre[strcspn(tutor.nombre, "\n")] = '\0';
+
+            const char *paramValues[2] = {
+                tutor.nombre,
+                tutor.rut
+            };
+
+            PGresult *res = PQexecParams(
+                conn,
+                "UPDATE public.tutor "
+                "SET nombre = $1 "
+                "WHERE rut = $2",
+                2,
+                NULL,
+                paramValues,
+                NULL,
+                NULL,
+                0
+            );
+
+            if (PQresultStatus(res) != PGRES_COMMAND_OK)
+            {
+                fprintf(stderr,
+                        "UPDATE failed: %s\n",
+                        PQerrorMessage(conn));
+            }
+            else
+            {
+                printf("Tutor NOMBRE modificado exitosamente\n");
+            }
+
+            PQclear(res);
+
+            break;
+        }
+
+        case 2:
+        {
+            printf("RUT del tutor a cambiar el eMail:\n");
+            fgets(tutor.rut, sizeof(tutor.rut), stdin);
+            tutor.rut[strcspn(tutor.rut, "\n")] = '\0';
+
+            printf("Nuevo eMail:\n");
+            fgets(tutor.email, sizeof(tutor.email), stdin);
+            tutor.email[strcspn(tutor.email, "\n")] = '\0';
+
+            const char *paramValues[2] = {
+                tutor.email,
+                tutor.rut
+            };
+
+            PGresult *res = PQexecParams(
+                conn,
+                "UPDATE public.tutor "
+                "SET email = $1 "
+                "WHERE rut = $2",
+                2,
+                NULL,
+                paramValues,
+                NULL,
+                NULL,
+                0
+            );
+
+            if (PQresultStatus(res) != PGRES_COMMAND_OK)
+            {
+                fprintf(stderr,
+                        "UPDATE failed: %s\n",
+                        PQerrorMessage(conn));
+            }
+            else
+            {
+                printf("Tutor EMAIL modificado exitosamente\n");
+            }
+
+            PQclear(res);
+
+            break;
+        }
+
+        case 3:
+        {
+            printf("RUT del tutor a cambiar el teléfono:\n");
+            fgets(tutor.rut, sizeof(tutor.rut), stdin);
+            tutor.rut[strcspn(tutor.rut, "\n")] = '\0';
+
+            printf("Nuevo teléfono:\n");
+            fgets(tutor.telefono, sizeof(tutor.telefono), stdin);
+            tutor.telefono[strcspn(tutor.telefono, "\n")] = '\0';
+
+            const char *paramValues[2] = {
+                tutor.telefono,
+                tutor.rut
+            };
+
+            PGresult *res = PQexecParams(
+                conn,
+                "UPDATE public.tutor "
+                "SET telefono = $1 "
+                "WHERE rut = $2",
+                2,
+                NULL,
+                paramValues,
+                NULL,
+                NULL,
+                0
+            );
+
+            if (PQresultStatus(res) != PGRES_COMMAND_OK)
+            {
+                fprintf(stderr,
+                        "UPDATE failed: %s\n",
+                        PQerrorMessage(conn));
+            }
+            else
+            {
+                printf("Tutor TELÉFONO modificado exitosamente\n");
+            }
+
+            PQclear(res);
+
+            break;
+        }
+
+        case 4:
+        {
+            printf("RUT del tutor a cambiar el domicilio:\n");
+            fgets(tutor.rut, sizeof(tutor.rut), stdin);
+            tutor.rut[strcspn(tutor.rut, "\n")] = '\0';
+
+            printf("Nuevo domicilio:\n");
+            fgets(tutor.domicilio, sizeof(tutor.domicilio), stdin);
+            tutor.domicilio[strcspn(tutor.domicilio, "\n")] = '\0';
+
+            const char *paramValues[2] = {
+                tutor.domicilio,
+                tutor.rut
+            };
+
+            PGresult *res = PQexecParams(
+                conn,
+                "UPDATE public.tutor "
+                "SET domicilio = $1 "
+                "WHERE rut = $2",
+                2,
+                NULL,
+                paramValues,
+                NULL,
+                NULL,
+                0
+            );
+
+            if (PQresultStatus(res) != PGRES_COMMAND_OK)
+            {
+                fprintf(stderr,
+                        "UPDATE failed: %s\n",
+                        PQerrorMessage(conn));
+            }
+            else
+            {
+                printf("Tutor DOMICILIO modificado exitosamente\n");
+            }
+
+            PQclear(res);
+
+            break;
+        }
+
+        default:
+            printf("Opción inválida\n");
+            break;
+    }
+}
+
+void deleteTutor(PGconn *conn)
+{
+    Tutor tutor;
+
+    printf("RUT del tutor a eliminar:\n");
+    fgets(tutor.rut, sizeof(tutor.rut), stdin);
+    tutor.rut[strcspn(tutor.rut, "\n")] = '\0';
+
+    const char *paramValues[1] = {
+        tutor.rut
+    };
+
+    PGresult *res = PQexecParams(
+        conn,
+        "DELETE FROM public.tutor "
+        "WHERE rut = $1 "
+        "RETURNING *",
+        1,
+        NULL,
+        paramValues,
+        NULL,
+        NULL,
+        0
+    );
+
+    if (PQresultStatus(res) != PGRES_TUPLES_OK)
+    {
+        fprintf(stderr,
+                "DELETE failed: %s\n",
+                PQerrorMessage(conn));
+
+        PQclear(res);
+        return;
+    }
+
+    if (PQntuples(res) == 0)
+    {
+        printf("No existe un tutor con ese RUT.\n");
+        PQclear(res);
+        return;
+    }
+
+    printf("\nTutor eliminado:\n");
+
+    for (int i = 0; i < PQnfields(res); i++)
+    {
+        printf("%s: %s\n",
+               PQfname(res, i),
+               PQgetvalue(res, 0, i));
+    }
+
     PQclear(res);
 }
