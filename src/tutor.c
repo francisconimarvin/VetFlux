@@ -8,7 +8,7 @@
 void createTutor(PGconn *conn)
 {
     Tutor tutor;
-    printf("RUT del tutor: (ej 26.051.367-2)\n");
+    printf("RUT del tutor: (ej 21.111.111-2)\n");
     fgets(tutor.rut, sizeof(tutor.rut), stdin);
     tutor.rut[strcspn(tutor.rut,"\n")] = 0;
 

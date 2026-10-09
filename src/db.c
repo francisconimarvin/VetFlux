@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 
-PGconn *db_connect(void)
+PGconn *dbConnect(void)
 {
     const char *conninfo;
     conninfo = "host=localhost port=5432 dbname=VetFlux user=marvin";

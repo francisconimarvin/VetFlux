@@ -2,16 +2,13 @@
 #include <stdlib.h>
 #include "db.h"
 #include "tutor.h"
-
+#include "menu.h"
 int main ()
 {
-   PGconn *conn = db_connect();
+   PGconn *conn = dbConnect();
     
-   //createTutor(conn);  
-   readAllTutor(conn);
-   //readTutor(conn);
-   //PQfinish(conn);
-   deleteTutor(conn);
+   mostrarMenu(conn);
+   PQfinish(conn);
    return 0;
 
 

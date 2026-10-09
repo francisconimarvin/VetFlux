@@ -16,6 +16,8 @@ target_sources(VetLibrary
     PRIVATE
         src/db.c
         src/tutor.c
+        src/menu.c
+        src/utils.c
 
     PUBLIC 
         FILE_SET HEADERS
@@ -25,6 +27,9 @@ target_sources(VetLibrary
         FILES
             include/db.h
             include/tutor.h
+            include/menu.h
+            include/utils.h
+
 
     )
 

@@ -3,6 +3,6 @@
 
 #include "libpq-fe.h"
 
-PGconn *db_connect(void);
+PGconn *dbConnect(void);
 
 #endif //DB_H
