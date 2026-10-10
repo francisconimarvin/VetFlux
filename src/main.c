@@ -1,15 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <libpq-fe.h>
+
 #include "db.h"
-#include "tutor.h"
 #include "menu.h"
-int main ()
+#include "login.h"
+
+int main(void)
 {
-   PGconn *conn = dbConnect();
-    
-   mostrarMenu(conn);
-   PQfinish(conn);
-   return 0;
+    PGconn *conn = dbConnect();
 
+    int log = login(conn);
+    //  mostrarMenu(conn);    
+    PQfinish(conn);
 
+    return 0;
 }
