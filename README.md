@@ -14,6 +14,7 @@
 - GCC Compiler 16.2.1
 - PostgreSQL
 - CMake
+- Argon2
 
 # ¿Quieres utilizar el sistema en una página ya creada? 
 - TODO: Página.
