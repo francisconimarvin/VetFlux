@@ -11,7 +11,13 @@ int main(void)
     PGconn *conn = dbConnect();
 
     int log = login(conn);
-    //  mostrarMenu(conn);    
+    
+    if (log == 1)
+    {
+        mostrarMenu(conn); 
+    } else { 
+        printf("Acceso denegado\n");
+    }
     PQfinish(conn);
 
     return 0;
