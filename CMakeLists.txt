@@ -12,12 +12,15 @@ target_sources(VetFlux
 add_library(VetLibrary)
 find_package(PostgreSQL)
 target_link_libraries(VetFlux PRIVATE PostgreSQL::PostgreSQL)
+target_link_libraries(VetLibrary PUBLIC argon2)
 target_sources(VetLibrary
     PRIVATE
         src/db.c
         src/tutor.c
+        src/paciente.c
         src/menu.c
         src/utils.c
+        src/login.c
 
     PUBLIC 
         FILE_SET HEADERS
@@ -27,15 +30,13 @@ target_sources(VetLibrary
         FILES
             include/db.h
             include/tutor.h
+            include/paciente.h
             include/menu.h
             include/utils.h
-
-
+            include/login.h
     )
 
     target_link_libraries(VetFlux
         PRIVATE
             VetLibrary
         )
-
-
