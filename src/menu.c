@@ -3,9 +3,10 @@
 #include "menu.h"
 #include "tutor.h"
 #include "paciente.h"
-#include "utils.h" // getInteger(),
+#include "utils.h"
+#include "login.h"
 
-void mostrarMenu(PGconn *conn)
+void mostrarMenu(PGconn *conn, const Sesion *sesion)
 {
     int opcion = -1;
 
@@ -25,123 +26,124 @@ void mostrarMenu(PGconn *conn)
 
         switch (opcion) {
             case 1: {
-                int opcionCrud = -1;
+                        int opcionCrud = -1;
 
-                do {
-                    printf("\n=== Administrar tutores ===\n");
-                    printf("1. Crear tutor\n");
-                    printf("2. Actualizar tutor\n");
-                    printf("3. Mostrar todos los tutores\n");
-                    printf("4. Mostrar tutor por RUT\n");
-                    printf("5. Borrar tutor por RUT\n");
-                    printf("6. Volver al menu principal\n");
-                    printf("Selecciona una opcion: ");
+                        do {
+                            printf("\n=== Administrar tutores ===\n");
+                            printf("1. Crear tutor\n");
+                            printf("2. Actualizar tutor\n");
+                            printf("3. Mostrar todos los tutores\n");
+                            printf("4. Mostrar tutor por RUT\n");
+                            printf("5. Borrar tutor por RUT\n");
+                            printf("6. Volver al menu principal\n");
+                            printf("Selecciona una opcion: ");
 
-                    opcionCrud = getInteger();
+                            opcionCrud = getInteger();
 
-                    if (opcionCrud == -1) {
-                        printf("Entrada inválida.\n");
-                        continue;
+                            if (opcionCrud == -1) {
+                                printf("Entrada inválida.\n");
+                                continue;
+                            }
+
+                            switch (opcionCrud) {
+                                case 1:
+                                    createTutor(conn, sesion);
+                                    break;
+
+                                case 2:
+                                    updateTutor(conn, sesion);
+                                    break;
+
+                                case 3:
+                                    readAllTutor(conn, sesion);
+                                    break;
+
+                                case 4:
+                                    readTutor(conn, sesion);
+                                    break;
+
+                                case 5:
+                                    deleteTutor(conn, sesion);
+                                    break;
+
+                                case 6:
+                                    printf("Volviendo al menu principal...\n");
+                                    break;
+
+                                default:
+                                    printf("Opcion invalida.\n");
+                                    break;
+                            }
+
+                        } while (opcionCrud != 6);
+
+                        break;
                     }
-
-                    switch (opcionCrud) {
-                        case 1:
-                            createTutor(conn);
-                            break;
-
-                        case 2:
-                            updateTutor(conn);
-                            break;
-
-                        case 3:
-                            readAllTutor(conn);
-                            break;
-
-                        case 4:
-                            readTutor(conn);
-                            break;
-
-                        case 5:
-                            deleteTutor(conn);
-                            break;
-
-                        case 6:
-                            printf("Volviendo al menu principal...\n");
-                            break;
-
-                        default:
-                            printf("Opcion invalida.\n");
-                            break;
-                    }
-
-                } while (opcionCrud != 6);
-
-                break;
-            }
 
             case 2: {
-                int opcionCrud = -1;
+                        int opcionCrud = -1;
 
-                do {
-                    printf("\n=== Administrar pacientes ===\n");
-                    printf("1. Crear paciente\n");
-                    printf("2. Actualizar paciente\n");
-                    printf("3. Mostrar todos los pacientes\n");
-                    printf("4. Mostrar paciente por ID\n");
-                    printf("5. Borrar paciente por ID\n");
-                    printf("6. Volver al menu principal\n");
-                    printf("Selecciona una opcion: ");
+                        do {
+                            printf("\n=== Administrar pacientes ===\n");
+                            printf("1. Crear paciente\n");
+                            printf("2. Actualizar paciente\n");
+                            printf("3. Mostrar todos los pacientes\n");
+                            printf("4. Mostrar paciente por ID o RUT del tutor\n");
+                            printf("5. Borrar paciente por ID\n");
+                            printf("6. Volver al menu principal\n");
+                            printf("Selecciona una opcion: ");
 
-                    opcionCrud = getInteger();
+                            opcionCrud = getInteger();
 
-                    if (opcionCrud == -1) {
-                        printf("Entrada inválida.\n");
-                        continue;
+                            if (opcionCrud == -1) {
+                                printf("Entrada inválida.\n");
+                                continue;
+                            }
+
+                            switch (opcionCrud) {
+                                case 1:
+                                    createPaciente(conn, sesion);
+                                    break;
+
+                                case 2:
+                                    updatePaciente(conn, sesion);
+                                    break;
+
+                                case 3:
+                                    readAllPaciente(conn, sesion);
+                                    break;
+
+                                case 4:
+                                    readPaciente(conn, sesion);
+                                    break;
+
+                                case 5:
+                                    deletePaciente(conn, sesion);
+                                    break;
+
+                                case 6:
+                                    printf("Volviendo al menu principal...\n");
+                                    break;
+
+                                default:
+                                    printf("Opcion invalida.\n");
+                                    break;
+                            }
+
+                        } while (opcionCrud != 6);
+
+                        break;
                     }
-
-                    switch (opcionCrud) {
-                        case 1:
-                            createPaciente(conn);
-                            break;
-
-                        case 2:
-                            updatePaciente(conn);
-                            break;
-
-                        case 3:
-                            readAllPaciente(conn);
-                            break;
-
-                        case 4:
-                            readPaciente(conn);
-                            break;
-
-                        case 5:
-                            deletePaciente(conn);
-                            break;
-
-                        case 6:
-                            printf("Volviendo al menu principal...\n");
-                            break;
-
-                        default:
-                            printf("Opcion invalida.\n");
-                            break;
-                    }
-
-                } while (opcionCrud != 6);
-
-                break;
-            }
 
             case 8:
-                printf("Saliendo de VetFlux...\n");
-                break;
+                    printf("Saliendo de VetFlux...\n");
+                    break;
 
             default:
-                printf("Opcion invalida.\n");
-                break;
+                    printf("Opcion invalida.\n");
+                    break;
         }
 
     } while (opcion != 8);
 }
+

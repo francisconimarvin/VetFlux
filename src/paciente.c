@@ -4,8 +4,10 @@
 #include <string.h>
 #include "paciente.h"
 #include "db.h"
+#include "login.h"
+#include "utils.h"
 
-void createPaciente(PGconn *conn)
+void createPaciente(PGconn *conn, const Sesion *sesion)
 {
     Paciente paciente;
     char edad[12];
@@ -38,10 +40,6 @@ void createPaciente(PGconn *conn)
     fgets(paciente.tutor_fk, sizeof(paciente.tutor_fk), stdin);
     paciente.tutor_fk[strcspn(paciente.tutor_fk, "\n")] = '\0';
 
-    printf("RUT del doctor:\n");
-    fgets(paciente.doctor_fk, sizeof(paciente.doctor_fk), stdin);
-    paciente.doctor_fk[strcspn(paciente.doctor_fk, "\n")] = '\0';
-
     const char *paramValues[8] = {
         paciente.nombre,
         edad,
@@ -50,21 +48,21 @@ void createPaciente(PGconn *conn)
         paciente.raza,
         paciente.color,
         paciente.tutor_fk,
-        paciente.doctor_fk
+        sesion->rut
     };
 
     PGresult *res = PQexecParams(
-        conn,
-        "INSERT INTO public.paciente "
-        "(nombre, edad, sexo, especie, raza, color, tutor_fk, doctor_fk) "
-        "VALUES ($1, $2::integer, $3, $4, $5, $6, $7, $8)",
-        8,
-        NULL,
-        paramValues,
-        NULL,
-        NULL,
-        0
-    );
+            conn,
+            "INSERT INTO public.paciente "
+            "(nombre, edad, sexo, especie, raza, color, tutor_fk, doctor_fk) "
+            "VALUES ($1, $2::integer, $3, $4, $5, $6, $7, $8)",
+            8,
+            NULL,
+            paramValues,
+            NULL,
+            NULL,
+            0
+            );
 
     if (PQresultStatus(res) != PGRES_COMMAND_OK)
     {
@@ -78,18 +76,22 @@ void createPaciente(PGconn *conn)
     PQclear(res);
 }
 
-void readAllPaciente(PGconn *conn)
+void readAllPaciente(PGconn *conn, const Sesion *sesion)
 {
+    const char *paramValues[1] = { sesion->rut };
+
     PGresult *res = PQexecParams(
-        conn,
-        "SELECT * FROM public.paciente ORDER BY id",
-        0,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        0
-    );
+            conn,
+            "SELECT * FROM public.paciente "
+            "WHERE doctor_fk = $1 "
+            "ORDER BY id",
+            1,
+            NULL,
+            paramValues,
+            NULL,
+            NULL,
+            0
+            );
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
     {
@@ -128,19 +130,23 @@ void readAllPaciente(PGconn *conn)
     PQclear(res);
 }
 
-void readPaciente(PGconn *conn)
+void readPaciente(PGconn *conn, const Sesion *sesion)
 {
     printf("¿Cómo quieres buscar al paciente?\n");
     printf("1. Por ID\n");
     printf("2. Por RUT del tutor\n");
 
-    int option;
-    scanf("%d", &option);
-    getchar();
+    int option = getInteger();
+
+    if (option == -1)
+    {
+        printf("Opción inválida.\n");
+        return;
+    }
 
     char search[100];
     const char *query;
-    const char *paramValues[1] = { search };
+    const char *paramValues[2];
 
     switch (option)
     {
@@ -151,7 +157,7 @@ void readPaciente(PGconn *conn)
 
             query =
                 "SELECT * FROM public.paciente "
-                "WHERE id = $1::integer";
+                "WHERE id = $1::integer AND doctor_fk = $2";
 
             break;
 
@@ -162,7 +168,7 @@ void readPaciente(PGconn *conn)
 
             query =
                 "SELECT * FROM public.paciente "
-                "WHERE tutor_fk = $1 "
+                "WHERE tutor_fk = $1 AND doctor_fk = $2 "
                 "ORDER BY id";
 
             break;
@@ -172,16 +178,19 @@ void readPaciente(PGconn *conn)
             return;
     }
 
+    paramValues[0] = search;
+    paramValues[1] = sesion->rut;
+
     PGresult *res = PQexecParams(
-        conn,
-        query,
-        1,
-        NULL,
-        paramValues,
-        NULL,
-        NULL,
-        0
-    );
+            conn,
+            query,
+            2,
+            NULL,
+            paramValues,
+            NULL,
+            NULL,
+            0
+            );
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
     {
@@ -220,7 +229,7 @@ void readPaciente(PGconn *conn)
     PQclear(res);
 }
 
-void updatePaciente(PGconn *conn)
+void updatePaciente(PGconn *conn, const Sesion *sesion)
 {
     char id[12];
     char value[200];
@@ -237,10 +246,16 @@ void updatePaciente(PGconn *conn)
     printf("5. Raza\n");
     printf("6. Color\n");
     printf("7. RUT del tutor\n");
-    printf("8. RUT del doctor\n");
 
     int option;
-    scanf("%d", &option);
+
+    if (scanf("%d", &option) != 1)
+    {
+        printf("Opción inválida.\n");
+        while (getchar() != '\n');
+        return;
+    }
+
     getchar();
 
     const char *query;
@@ -252,7 +267,7 @@ void updatePaciente(PGconn *conn)
             field = "nombre";
             query =
                 "UPDATE public.paciente SET nombre = $1 "
-                "WHERE id = $2::integer";
+                "WHERE id = $2::integer AND doctor_fk = $3";
             printf("Nuevo nombre:\n");
             break;
 
@@ -260,7 +275,7 @@ void updatePaciente(PGconn *conn)
             field = "edad";
             query =
                 "UPDATE public.paciente SET edad = $1::integer "
-                "WHERE id = $2::integer";
+                "WHERE id = $2::integer AND doctor_fk = $3";
             printf("Nueva edad:\n");
             break;
 
@@ -268,7 +283,7 @@ void updatePaciente(PGconn *conn)
             field = "sexo";
             query =
                 "UPDATE public.paciente SET sexo = $1 "
-                "WHERE id = $2::integer";
+                "WHERE id = $2::integer AND doctor_fk = $3";
             printf("Nuevo sexo (H/M):\n");
             break;
 
@@ -276,7 +291,7 @@ void updatePaciente(PGconn *conn)
             field = "especie";
             query =
                 "UPDATE public.paciente SET especie = $1 "
-                "WHERE id = $2::integer";
+                "WHERE id = $2::integer AND doctor_fk = $3";
             printf("Nueva especie:\n");
             break;
 
@@ -284,7 +299,7 @@ void updatePaciente(PGconn *conn)
             field = "raza";
             query =
                 "UPDATE public.paciente SET raza = $1 "
-                "WHERE id = $2::integer";
+                "WHERE id = $2::integer AND doctor_fk = $3";
             printf("Nueva raza:\n");
             break;
 
@@ -292,7 +307,7 @@ void updatePaciente(PGconn *conn)
             field = "color";
             query =
                 "UPDATE public.paciente SET color = $1 "
-                "WHERE id = $2::integer";
+                "WHERE id = $2::integer AND doctor_fk = $3";
             printf("Nuevo color:\n");
             break;
 
@@ -300,16 +315,8 @@ void updatePaciente(PGconn *conn)
             field = "tutor_fk";
             query =
                 "UPDATE public.paciente SET tutor_fk = $1 "
-                "WHERE id = $2::integer";
+                "WHERE id = $2::integer AND doctor_fk = $3";
             printf("Nuevo RUT del tutor:\n");
-            break;
-
-        case 8:
-            field = "doctor_fk";
-            query =
-                "UPDATE public.paciente SET doctor_fk = $1 "
-                "WHERE id = $2::integer";
-            printf("Nuevo RUT del doctor:\n");
             break;
 
         default:
@@ -320,18 +327,22 @@ void updatePaciente(PGconn *conn)
     fgets(value, sizeof(value), stdin);
     value[strcspn(value, "\n")] = '\0';
 
-    const char *paramValues[2] = { value, id };
+    const char *paramValues[3] = {
+        value,
+        id,
+        sesion->rut
+    };
 
     PGresult *res = PQexecParams(
-        conn,
-        query,
-        2,
-        NULL,
-        paramValues,
-        NULL,
-        NULL,
-        0
-    );
+            conn,
+            query,
+            3,
+            NULL,
+            paramValues,
+            NULL,
+            NULL,
+            0
+            );
 
     if (PQresultStatus(res) != PGRES_COMMAND_OK)
     {
@@ -339,7 +350,7 @@ void updatePaciente(PGconn *conn)
     }
     else if (atoi(PQcmdTuples(res)) == 0)
     {
-        printf("No existe un paciente con ese ID.\n");
+        printf("No existe un paciente con ese ID o no tienes acceso a él.\n");
     }
     else
     {
@@ -349,7 +360,7 @@ void updatePaciente(PGconn *conn)
     PQclear(res);
 }
 
-void deletePaciente(PGconn *conn)
+void deletePaciente(PGconn *conn, const Sesion *sesion)
 {
     char id[12];
 
@@ -357,20 +368,23 @@ void deletePaciente(PGconn *conn)
     fgets(id, sizeof(id), stdin);
     id[strcspn(id, "\n")] = '\0';
 
-    const char *paramValues[1] = { id };
+    const char *paramValues[2] = {
+        id,
+        sesion->rut
+    };
 
     PGresult *res = PQexecParams(
-        conn,
-        "DELETE FROM public.paciente "
-        "WHERE id = $1::integer "
-        "RETURNING *",
-        1,
-        NULL,
-        paramValues,
-        NULL,
-        NULL,
-        0
-    );
+            conn,
+            "DELETE FROM public.paciente "
+            "WHERE id = $1::integer AND doctor_fk = $2 "
+            "RETURNING *",
+            2,
+            NULL,
+            paramValues,
+            NULL,
+            NULL,
+            0
+            );
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
     {
@@ -381,7 +395,7 @@ void deletePaciente(PGconn *conn)
 
     if (PQntuples(res) == 0)
     {
-        printf("No existe un paciente con ese ID.\n");
+        printf("No existe un paciente con ese ID o no tienes acceso a él.\n");
         PQclear(res);
         return;
     }
@@ -391,8 +405,8 @@ void deletePaciente(PGconn *conn)
     for (int i = 0; i < PQnfields(res); i++)
     {
         printf("%s: %s\n",
-               PQfname(res, i),
-               PQgetvalue(res, 0, i));
+                PQfname(res, i),
+                PQgetvalue(res, 0, i));
     }
 
     PQclear(res);

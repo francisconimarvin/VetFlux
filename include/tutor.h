@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <libpq-fe.h>
+#include "login.h"
 
 typedef struct tutor {
     char rut[16];
@@ -12,10 +13,10 @@ typedef struct tutor {
     char domicilio[200];
 } Tutor;
 
-void createTutor(PGconn *conn);
-void readAllTutor(PGconn *conn);
-void readTutor(PGconn *conn);
-void updateTutor(PGconn *conn);
-void deleteTutor(PGconn *conn);
+void createTutor(PGconn *conn, const Sesion *sesion);
+void readAllTutor(PGconn *conn, const Sesion *sesion);
+void readTutor(PGconn *conn, const Sesion *sesion);
+void updateTutor(PGconn *conn, const Sesion *sesion);
+void deleteTutor(PGconn *conn, const Sesion *sesion);
 
 #endif

@@ -5,20 +5,23 @@
 #include <libpq-fe.h>
 #include <argon2.h> // install argon2 on your local machine
 #include <string.h>
-    
-int login(PGconn *conn)
+
+Sesion *login(PGconn *conn)
 {
-    Sesion sesion;
+    Sesion *sesion = malloc(sizeof(Sesion));
+
+    if (sesion == NULL)
+        return NULL;
 
     printf("Doctor, ingrese su rut: (ej 21.111.111-2)\n");
-    fgets(sesion.rut, sizeof(sesion.rut), stdin);
-    sesion.rut[strcspn(sesion.rut,"\n")] = 0;
+    fgets(sesion->rut, sizeof(sesion->rut), stdin);
+    sesion->rut[strcspn(sesion->rut, "\n")] = 0;
 
     printf("Doctor, ingrese su contraseña:\n");
-    fgets(sesion.psswd, sizeof(sesion.psswd), stdin);
-    sesion.psswd[strcspn(sesion.psswd,"\n")] = 0;
+    fgets(sesion->psswd, sizeof(sesion->psswd), stdin);
+    sesion->psswd[strcspn(sesion->psswd, "\n")] = 0;
 
-    const char *paramValues[1] = { sesion.rut };
+    const char *paramValues[1] = { sesion->rut };
 
     PGresult *res = PQexecParams(
             conn,
@@ -31,17 +34,23 @@ int login(PGconn *conn)
             0
             );
 
-    if (res == NULL || PQresultStatus(res) != PGRES_TUPLES_OK) 
+    if (res == NULL || PQresultStatus(res) != PGRES_TUPLES_OK)
     {
         fprintf(stderr, "Error al consultar usuario: %s\n", PQerrorMessage(conn));
-        return 0;
+
+        if (res != NULL)
+            PQclear(res);
+
+        free(sesion);
+        return NULL;
     }
 
-    if (PQntuples(res) != 1) 
+    if (PQntuples(res) != 1)
     {
         printf("RUT o contraseña incorrectos.\n");
         PQclear(res);
-        return 0;
+        free(sesion);
+        return NULL;
     }
 
     // Read the documentation in https://github.com/winlibs/argon2/blob/master/include/argon2.h#L343
@@ -49,17 +58,21 @@ int login(PGconn *conn)
 
     int resultado = argon2id_verify(
             hash,
-            sesion.psswd,
-            strlen(sesion.psswd)
+            sesion->psswd,
+            strlen(sesion->psswd)
             );
 
     PQclear(res);
 
-    if (resultado != ARGON2_OK) {
+    if (resultado != ARGON2_OK)
+    {
         printf("RUT o contraseña incorrectos.\n");
-        return 0;
+        free(sesion);
+        return NULL;
     }
 
+    memset(sesion->psswd, 0, sizeof(sesion->psswd));
+
     printf("Inicio de sesión exitoso.\n");
-    return 1;
+    return sesion;
 }

@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <libpq-fe.h>
+#include "login.h"
 
 typedef struct paciente 
 {
@@ -17,11 +18,11 @@ typedef struct paciente
     char doctor_fk[16];
 } Paciente;
 
-void createPaciente(PGconn *conn);
-void readAllPaciente(PGconn *conn);
-void readPaciente(PGconn *conn);
-void updatePaciente(PGconn *conn);
-void deletePaciente(PGconn *conn);
+void createPaciente(PGconn *conn, const Sesion *sesion);
+void readAllPaciente(PGconn *conn, const Sesion *sesion);
+void readPaciente(PGconn *conn, const Sesion *sesion);
+void updatePaciente(PGconn *conn, const Sesion *sesion);
+void deletePaciente(PGconn *conn, const Sesion *sesion);
 
 #endif
 

@@ -2,8 +2,8 @@
 #define MENU_H
 
 #include <libpq-fe.h>
-//#include "sesion.h"
+#include "login.h"
 
-void mostrarMenu(PGconn *conn);
+void mostrarMenu(PGconn *conn, const Sesion *sesion);
 
 #endif
