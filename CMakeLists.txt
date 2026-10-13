@@ -21,6 +21,7 @@ target_sources(VetLibrary
         src/menu.c
         src/utils.c
         src/login.c
+        src/agenda.c
 
     PUBLIC 
         FILE_SET HEADERS
@@ -34,6 +35,7 @@ target_sources(VetLibrary
             include/menu.h
             include/utils.h
             include/login.h
+            include/agenda.h
     )
 
     target_link_libraries(VetFlux
