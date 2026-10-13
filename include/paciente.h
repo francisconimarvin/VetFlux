@@ -9,8 +9,8 @@ typedef struct paciente
 {
     int id;
     char nombre[100];
-    char edad[2];
-    char sexo[2];
+    char edad[5];
+    char sexo[4];
     char especie[50];
     char raza[100];
     char color[50];

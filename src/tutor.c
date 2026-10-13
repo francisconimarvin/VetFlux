@@ -37,21 +37,19 @@ void createTutor(PGconn *conn, const Sesion *sesion)
         tutor.email,
         tutor.telefono,
         tutor.domicilio,
-        sesion->rut
-    };
+        sesion->rut};
 
     PGresult *res = PQexecParams(
-            conn,
-            "INSERT INTO public.tutor "
-            "(rut, nombre, email, telefono, domicilio, doctor_fk) "
-            "VALUES ($1, $2, $3, $4, $5, $6)",
-            6,
-            NULL,
-            paramValues,
-            NULL,
-            NULL,
-            0
-            );
+        conn,
+        "INSERT INTO public.tutor "
+        "(rut, nombre, email, telefono, domicilio, doctor_fk) "
+        "VALUES ($1, $2, $3, $4, $5, $6)",
+        6,
+        NULL,
+        paramValues,
+        NULL,
+        NULL,
+        0);
 
     if (PQresultStatus(res) != PGRES_COMMAND_OK)
     {
@@ -68,21 +66,19 @@ void createTutor(PGconn *conn, const Sesion *sesion)
 void readAllTutor(PGconn *conn, const Sesion *sesion)
 {
     const char *paramValues[1] = {
-        sesion->rut
-    };
+        sesion->rut};
 
     PGresult *res = PQexecParams(
-            conn,
-            "SELECT * FROM public.tutor "
-            "WHERE doctor_fk = $1 "
-            "ORDER BY rut",
-            1,
-            NULL,
-            paramValues,
-            NULL,
-            NULL,
-            0
-            );
+        conn,
+        "SELECT * FROM public.tutor "
+        "WHERE doctor_fk = $1 "
+        "ORDER BY rut",
+        1,
+        NULL,
+        paramValues,
+        NULL,
+        NULL,
+        0);
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
     {
@@ -91,25 +87,7 @@ void readAllTutor(PGconn *conn, const Sesion *sesion)
         return;
     }
 
-    int rows = PQntuples(res);
-    int columns = PQnfields(res);
-
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < columns; j++)
-        {
-            printf("%s: %s ",
-                    PQfname(res, j),
-                    PQgetvalue(res, i, j));
-        }
-
-        printf("\n");
-    }
-
-    if (rows == 0)
-    {
-        printf("No tienes tutores registrados.\n");
-    }
+    printQueryResult(res);
 
     PQclear(res);
 }
@@ -124,20 +102,18 @@ void readTutor(PGconn *conn, const Sesion *sesion)
 
     const char *paramValues[2] = {
         tutor.rut,
-        sesion->rut
-    };
+        sesion->rut};
 
     PGresult *res = PQexecParams(
-            conn,
-            "SELECT * FROM public.tutor "
-            "WHERE rut = $1 AND doctor_fk = $2",
-            2,
-            NULL,
-            paramValues,
-            NULL,
-            NULL,
-            0
-            );
+        conn,
+        "SELECT * FROM public.tutor "
+        "WHERE rut = $1 AND doctor_fk = $2",
+        2,
+        NULL,
+        paramValues,
+        NULL,
+        NULL,
+        0);
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
     {
@@ -146,24 +122,7 @@ void readTutor(PGconn *conn, const Sesion *sesion)
         return;
     }
 
-    int rows = PQntuples(res);
-    int columns = PQnfields(res);
-
-    if (rows == 0)
-    {
-        printf("No existe un tutor con ese RUT en tu clínica.\n");
-    }
-
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < columns; j++)
-        {
-            printf("%s: %s\n",
-                    PQfname(res, j),
-                    PQgetvalue(res, i, j));
-        }
-    }
-
+    printQueryResult(res);
     PQclear(res);
 }
 
@@ -191,29 +150,29 @@ void updateTutor(PGconn *conn, const Sesion *sesion)
 
     switch (option)
     {
-        case 1:
-            campo = "nombre";
-            printf("RUT del tutor a cambiar el nombre:\n");
-            break;
+    case 1:
+        campo = "nombre";
+        printf("RUT del tutor a cambiar el nombre:\n");
+        break;
 
-        case 2:
-            campo = "email";
-            printf("RUT del tutor a cambiar el eMail:\n");
-            break;
+    case 2:
+        campo = "email";
+        printf("RUT del tutor a cambiar el eMail:\n");
+        break;
 
-        case 3:
-            campo = "telefono";
-            printf("RUT del tutor a cambiar el teléfono:\n");
-            break;
+    case 3:
+        campo = "telefono";
+        printf("RUT del tutor a cambiar el teléfono:\n");
+        break;
 
-        case 4:
-            campo = "domicilio";
-            printf("RUT del tutor a cambiar el domicilio:\n");
-            break;
+    case 4:
+        campo = "domicilio";
+        printf("RUT del tutor a cambiar el domicilio:\n");
+        break;
 
-        default:
-            printf("Opción inválida.\n");
-            return;
+    default:
+        printf("Opción inválida.\n");
+        return;
     }
 
     fgets(tutor.rut, sizeof(tutor.rut), stdin);
@@ -221,33 +180,33 @@ void updateTutor(PGconn *conn, const Sesion *sesion)
 
     switch (option)
     {
-        case 1:
-            printf("Nuevo nombre:\n");
-            fgets(tutor.nombre, sizeof(tutor.nombre), stdin);
-            tutor.nombre[strcspn(tutor.nombre, "\n")] = '\0';
-            valor = tutor.nombre;
-            break;
+    case 1:
+        printf("Nuevo nombre:\n");
+        fgets(tutor.nombre, sizeof(tutor.nombre), stdin);
+        tutor.nombre[strcspn(tutor.nombre, "\n")] = '\0';
+        valor = tutor.nombre;
+        break;
 
-        case 2:
-            printf("Nuevo eMail:\n");
-            fgets(tutor.email, sizeof(tutor.email), stdin);
-            tutor.email[strcspn(tutor.email, "\n")] = '\0';
-            valor = tutor.email;
-            break;
+    case 2:
+        printf("Nuevo eMail:\n");
+        fgets(tutor.email, sizeof(tutor.email), stdin);
+        tutor.email[strcspn(tutor.email, "\n")] = '\0';
+        valor = tutor.email;
+        break;
 
-        case 3:
-            printf("Nuevo teléfono:\n");
-            fgets(tutor.telefono, sizeof(tutor.telefono), stdin);
-            tutor.telefono[strcspn(tutor.telefono, "\n")] = '\0';
-            valor = tutor.telefono;
-            break;
+    case 3:
+        printf("Nuevo teléfono:\n");
+        fgets(tutor.telefono, sizeof(tutor.telefono), stdin);
+        tutor.telefono[strcspn(tutor.telefono, "\n")] = '\0';
+        valor = tutor.telefono;
+        break;
 
-        case 4:
-            printf("Nuevo domicilio:\n");
-            fgets(tutor.domicilio, sizeof(tutor.domicilio), stdin);
-            tutor.domicilio[strcspn(tutor.domicilio, "\n")] = '\0';
-            valor = tutor.domicilio;
-            break;
+    case 4:
+        printf("Nuevo domicilio:\n");
+        fgets(tutor.domicilio, sizeof(tutor.domicilio), stdin);
+        tutor.domicilio[strcspn(tutor.domicilio, "\n")] = '\0';
+        valor = tutor.domicilio;
+        break;
     }
 
     /*
@@ -257,29 +216,26 @@ void updateTutor(PGconn *conn, const Sesion *sesion)
     char query[200];
 
     snprintf(
-            query,
-            sizeof(query),
-            "UPDATE public.tutor SET %s = $1 "
-            "WHERE rut = $2 AND doctor_fk = $3",
-            campo
-            );
+        query,
+        sizeof(query),
+        "UPDATE public.tutor SET %s = $1 "
+        "WHERE rut = $2 AND doctor_fk = $3",
+        campo);
 
     const char *paramValues[3] = {
         valor,
         tutor.rut,
-        sesion->rut
-    };
+        sesion->rut};
 
     PGresult *res = PQexecParams(
-            conn,
-            query,
-            3,
-            NULL,
-            paramValues,
-            NULL,
-            NULL,
-            0
-            );
+        conn,
+        query,
+        3,
+        NULL,
+        paramValues,
+        NULL,
+        NULL,
+        0);
 
     if (PQresultStatus(res) != PGRES_COMMAND_OK)
     {
@@ -307,21 +263,19 @@ void deleteTutor(PGconn *conn, const Sesion *sesion)
 
     const char *paramValues[2] = {
         tutor.rut,
-        sesion->rut
-    };
+        sesion->rut};
 
     PGresult *res = PQexecParams(
-            conn,
-            "DELETE FROM public.tutor "
-            "WHERE rut = $1 AND doctor_fk = $2 "
-            "RETURNING *",
-            2,
-            NULL,
-            paramValues,
-            NULL,
-            NULL,
-            0
-            );
+        conn,
+        "DELETE FROM public.tutor "
+        "WHERE rut = $1 AND doctor_fk = $2 "
+        "RETURNING *",
+        2,
+        NULL,
+        paramValues,
+        NULL,
+        NULL,
+        0);
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
     {
@@ -342,10 +296,9 @@ void deleteTutor(PGconn *conn, const Sesion *sesion)
     for (int i = 0; i < PQnfields(res); i++)
     {
         printf("%s: %s\n",
-                PQfname(res, i),
-                PQgetvalue(res, 0, i));
+               PQfname(res, i),
+               PQgetvalue(res, 0, i));
     }
 
     PQclear(res);
 }
-

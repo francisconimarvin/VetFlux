@@ -16,7 +16,9 @@ int main(void)
     {
         mostrarMenu(conn, sesion);
         free(sesion);
-    } else {
+    }
+    else
+    {
         printf("Acceso denegado\n");
     }
 

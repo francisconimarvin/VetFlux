@@ -89,32 +89,7 @@ void readAllPaciente(PGconn *conn, const Sesion *sesion)
         return;
     }
 
-    int rows = PQntuples(res);
-    int columns = PQnfields(res);
-
-    if (rows == 0)
-    {
-        printf("No hay pacientes registrados.\n");
-        PQclear(res);
-        return;
-    }
-
-    for (int j = 0; j < columns; j++)
-    {
-        printf("%-16s", PQfname(res, j));
-    }
-
-    printf("\n");
-
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < columns; j++)
-        {
-            printf("%-16s", PQgetvalue(res, i, j));
-        }
-
-        printf("\n");
-    }
+    printQueryResult(res);
 
     PQclear(res);
 }
@@ -187,32 +162,7 @@ void readPaciente(PGconn *conn, const Sesion *sesion)
         return;
     }
 
-    int rows = PQntuples(res);
-    int columns = PQnfields(res);
-
-    if (rows == 0)
-    {
-        printf("No se encontraron pacientes.\n");
-        PQclear(res);
-        return;
-    }
-
-    for (int j = 0; j < columns; j++)
-    {
-        printf("%-16s", PQfname(res, j));
-    }
-
-    printf("\n");
-
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < columns; j++)
-        {
-            printf("%-16s", PQgetvalue(res, i, j));
-        }
-
-        printf("\n");
-    }
+    printQueryResult(res);
 
     PQclear(res);
 }

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-
+#include <stdlib.h>
 #include "agenda.h"
 #include "login.h"
 #include <libpq-fe.h>
@@ -66,8 +66,10 @@ void readAllAgenda(PGconn *conn, const Sesion *sesion)
 
     PGresult *res = PQexecParams(
         conn,
-        "SELECT a.* FROM public.agenda a "
+        "SELECT a.*, t.domicilio "
+        "FROM public.agenda a "
         "JOIN public.paciente p ON p.id = a.id_paciente_fk "
+        "LEFT JOIN public.tutor t ON t.rut = p.tutor_fk "
         "WHERE p.doctor_fk = $1 "
         "ORDER BY a.fecha_hora",
         1,
@@ -84,33 +86,7 @@ void readAllAgenda(PGconn *conn, const Sesion *sesion)
         return;
     }
 
-    int rows = PQntuples(res);
-    int columns = PQnfields(res);
-
-    if (rows == 0)
-    {
-        printf("No hay agendas registradas.\n");
-        PQclear(res);
-        return;
-    }
-
-    for (int j = 0; j < columns; j++)
-    {
-        printf("%-20s", PQfname(res, j));
-    }
-
-    printf("\n");
-
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < columns; j++)
-        {
-            printf("%-20s", PQgetvalue(res, i, j));
-        }
-
-        printf("\n");
-    }
-
+    printQueryResult(res);
     PQclear(res);
 }
 
@@ -128,8 +104,10 @@ void readAgenda(PGconn *conn, const Sesion *sesion)
 
     PGresult *res = PQexecParams(
         conn,
-        "SELECT a.* FROM public.agenda a "
+        "SELECT a.*, t.domicilio "
+        "FROM public.agenda a "
         "JOIN public.paciente p ON p.id = a.id_paciente_fk "
+        "LEFT JOIN public.tutor t ON t.rut = p.tutor_fk "
         "WHERE p.id = $1::integer "
         "AND p.doctor_fk = $2 "
         "ORDER BY a.fecha_hora",
@@ -147,33 +125,7 @@ void readAgenda(PGconn *conn, const Sesion *sesion)
         return;
     }
 
-    int rows = PQntuples(res);
-    int columns = PQnfields(res);
-
-    if (rows == 0)
-    {
-        printf("No hay agendas para ese paciente o no tienes acceso a él.\n");
-        PQclear(res);
-        return;
-    }
-
-    for (int j = 0; j < columns; j++)
-    {
-        printf("%-20s", PQfname(res, j));
-    }
-
-    printf("\n");
-
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < columns; j++)
-        {
-            printf("%-20s", PQgetvalue(res, i, j));
-        }
-
-        printf("\n");
-    }
-
+    printQueryResult(res);
     PQclear(res);
 }
 
