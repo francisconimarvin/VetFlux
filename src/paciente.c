@@ -48,21 +48,12 @@ void createPaciente(PGconn *conn, const Sesion *sesion)
         paciente.raza,
         paciente.color,
         paciente.tutor_fk,
-        sesion->rut
-    };
+        sesion->rut};
 
-    PGresult *res = PQexecParams(
-            conn,
-            "INSERT INTO public.paciente "
+    PGresult *res = PQexecParams(conn, "INSERT INTO public.paciente "
             "(nombre, edad, sexo, especie, raza, color, tutor_fk, doctor_fk) "
             "VALUES ($1, $2::integer, $3, $4, $5, $6, $7, $8)",
-            8,
-            NULL,
-            paramValues,
-            NULL,
-            NULL,
-            0
-            );
+            8, NULL, paramValues, NULL, NULL, 0);
 
     if (PQresultStatus(res) != PGRES_COMMAND_OK)
     {
@@ -78,7 +69,7 @@ void createPaciente(PGconn *conn, const Sesion *sesion)
 
 void readAllPaciente(PGconn *conn, const Sesion *sesion)
 {
-    const char *paramValues[1] = { sesion->rut };
+    const char *paramValues[1] = {sesion->rut};
 
     PGresult *res = PQexecParams(
             conn,
@@ -90,8 +81,7 @@ void readAllPaciente(PGconn *conn, const Sesion *sesion)
             paramValues,
             NULL,
             NULL,
-            0
-            );
+            0);
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
     {
@@ -189,8 +179,7 @@ void readPaciente(PGconn *conn, const Sesion *sesion)
             paramValues,
             NULL,
             NULL,
-            0
-            );
+            0);
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
     {
@@ -252,7 +241,8 @@ void updatePaciente(PGconn *conn, const Sesion *sesion)
     if (scanf("%d", &option) != 1)
     {
         printf("Opción inválida.\n");
-        while (getchar() != '\n');
+        while (getchar() != '\n')
+            ;
         return;
     }
 
@@ -330,8 +320,7 @@ void updatePaciente(PGconn *conn, const Sesion *sesion)
     const char *paramValues[3] = {
         value,
         id,
-        sesion->rut
-    };
+        sesion->rut};
 
     PGresult *res = PQexecParams(
             conn,
@@ -341,8 +330,7 @@ void updatePaciente(PGconn *conn, const Sesion *sesion)
             paramValues,
             NULL,
             NULL,
-            0
-            );
+            0);
 
     if (PQresultStatus(res) != PGRES_COMMAND_OK)
     {
@@ -370,8 +358,7 @@ void deletePaciente(PGconn *conn, const Sesion *sesion)
 
     const char *paramValues[2] = {
         id,
-        sesion->rut
-    };
+        sesion->rut};
 
     PGresult *res = PQexecParams(
             conn,
@@ -383,8 +370,7 @@ void deletePaciente(PGconn *conn, const Sesion *sesion)
             paramValues,
             NULL,
             NULL,
-            0
-            );
+            0);
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
     {
