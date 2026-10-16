@@ -380,5 +380,5 @@ void mostrarMenu(PGconn *conn, const Sesion *sesion)
             break;
         }
 
-    } while (opcion != 8);
+    } while (opcion != 7);
 }
