@@ -24,6 +24,7 @@ target_sources(VetLibrary
         src/agenda.c
         src/inventario.c
         src/fichaMedica.c
+        src/receta.c
 
     PUBLIC 
         FILE_SET HEADERS
@@ -40,6 +41,7 @@ target_sources(VetLibrary
             include/agenda.h
             include/inventario.h
             include/fichaMedica.h
+            include/receta.h
     )
 
     target_link_libraries(VetFlux
