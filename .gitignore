@@ -1,7 +1,5 @@
 # Ignore sql files
 *.sql
-!sql/tables.sql
-!sql/triggers.sql
 
 # Ignore build
 build/
