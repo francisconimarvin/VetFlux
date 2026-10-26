@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(VetFlux)
+project(VetFlux LANGUAGES C)
+
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
 
 add_executable(VetFlux)
 target_sources(VetFlux
@@ -10,9 +14,12 @@ target_sources(VetFlux
 
 
 add_library(VetLibrary)
-find_package(PostgreSQL)
+
+find_package(PostgreSQL REQUIRED)
+
 target_link_libraries(VetFlux PRIVATE PostgreSQL::PostgreSQL)
-target_link_libraries(VetLibrary PUBLIC argon2)
+target_link_libraries(VetLibrary PUBLIC argon2 PostgreSQL::PostgreSQL)
+
 target_sources(VetLibrary
     PRIVATE
         src/db.c
@@ -25,6 +32,8 @@ target_sources(VetLibrary
         src/inventario.c
         src/fichaMedica.c
         src/receta.c
+        src/mongoose.c
+        src/api.c
 
     PUBLIC 
         FILE_SET HEADERS
@@ -42,6 +51,8 @@ target_sources(VetLibrary
             include/inventario.h
             include/fichaMedica.h
             include/receta.h
+            include/mongoose.h
+            include/api.h
     )
 
     target_link_libraries(VetFlux

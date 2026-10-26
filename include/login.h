@@ -10,6 +10,5 @@ typedef struct sesion
     int success;
 } Sesion;
 
-Sesion *login(PGconn *conn);
-
+Sesion *login(PGconn *conn, const char *rut, const char *passwd);
 #endif
