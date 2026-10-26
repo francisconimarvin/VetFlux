@@ -9,7 +9,7 @@ typedef struct inventario
     char cantidad[6];
 } Inventario;
 
-void readAllInventario(PGconn *conn, const Sesion *sesion);
-void updateInventario(PGconn *conn, const Sesion *sesion);
+PGresult *inventarioList(PGconn *conn, const Sesion *sesion);
+PGresult *inventarioUpdate(PGconn *conn, const Sesion *sesion, const char *instrumentoId, const Inventario *inventario);
 
 #endif

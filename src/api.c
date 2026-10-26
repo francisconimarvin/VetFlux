@@ -28,26 +28,19 @@ static void replyError(struct mg_connection *c, int status, const char *message)
 
 static bool appendBytes(char **body, size_t *length, size_t *capacity,
                         const char *value, size_t valueLength) {
-    if (valueLength > (size_t) -1 - *length - 1)
-        return false;
-
+    if (valueLength > (size_t) -1 - *length - 1) return false;
     size_t needed = *length + valueLength + 1;
     if (needed > *capacity) {
         size_t newCapacity = *capacity == 0 ? 256 : *capacity;
         while (newCapacity < needed) {
-            if (newCapacity > (size_t) -1 / 2) {
-                newCapacity = needed;
-                break;
-            }
+            if (newCapacity > (size_t) -1 / 2) { newCapacity = needed; break; }
             newCapacity *= 2;
         }
         char *newBody = realloc(*body, newCapacity);
-        if (newBody == NULL)
-            return false;
+        if (newBody == NULL) return false;
         *body = newBody;
         *capacity = newCapacity;
     }
-
     memcpy(*body + *length, value, valueLength);
     *length += valueLength;
     (*body)[*length] = '\0';
@@ -61,149 +54,79 @@ static bool appendText(char **body, size_t *length, size_t *capacity,
 
 static bool appendJsonString(char **body, size_t *length, size_t *capacity,
                              const char *value) {
-    if (!appendText(body, length, capacity, "\""))
-        return false;
+    if (!appendText(body, length, capacity, "\"")) return false;
     for (const unsigned char *p = (const unsigned char *) value; *p; p++) {
         char escaped[2];
         size_t escapedLength = 1;
         if (*p == '"' || *p == '\\') {
-            escaped[0] = '\\';
-            escaped[1] = (char) *p;
-            escapedLength = 2;
-        } else {
-            escaped[0] = *p < 0x20 ? ' ' : (char) *p;
-        }
-        if (!appendBytes(body, length, capacity, escaped, escapedLength))
-            return false;
+            escaped[0] = '\\'; escaped[1] = (char) *p; escapedLength = 2;
+        } else escaped[0] = *p < 0x20 ? ' ' : (char) *p;
+        if (!appendBytes(body, length, capacity, escaped, escapedLength)) return false;
     }
     return appendText(body, length, capacity, "\"");
 }
 
 static void replyResult(struct mg_connection *c, int status, PGresult *res) {
-    int rows = PQntuples(res), cols = PQnfields(res);
     char *body = NULL;
     size_t length = 0, capacity = 0;
     bool success = appendText(&body, &length, &capacity, "[");
-    for (int i = 0; i < rows; i++) {
-        if (success && i > 0)
-            success = appendText(&body, &length, &capacity, ",");
-        if (success)
-            success = appendText(&body, &length, &capacity, "{");
-        for (int j = 0; j < cols; j++) {
-            const char *key = PQfname(res, j), *value = PQgetvalue(res, i, j);
-            if (!success)
-                break;
-            if (j > 0)
-                success = appendText(&body, &length, &capacity, ",");
-            if (success)
-                success = appendJsonString(&body, &length, &capacity, key);
-            if (success)
-                success = appendText(&body, &length, &capacity, ":");
-            if (success && PQgetisnull(res, i, j)) {
-                success = appendText(&body, &length, &capacity, "null");
-            } else if (success) {
-                success = appendJsonString(&body, &length, &capacity, value);
+    for (int i = 0; success && i < PQntuples(res); i++) {
+        if (i) success = appendText(&body, &length, &capacity, ",");
+        if (success) success = appendText(&body, &length, &capacity, "{");
+        for (int j = 0; success && j < PQnfields(res); j++) {
+            if (j) success = appendText(&body, &length, &capacity, ",");
+            if (success) success = appendJsonString(&body, &length, &capacity, PQfname(res, j));
+            if (success) success = appendText(&body, &length, &capacity, ":");
+            if (success) {
+                if (PQgetisnull(res, i, j)) success = appendText(&body, &length, &capacity, "null");
+                else success = appendJsonString(&body, &length, &capacity, PQgetvalue(res, i, j));
             }
         }
-        if (success)
-            success = appendText(&body, &length, &capacity, "}");
+        if (success) success = appendText(&body, &length, &capacity, "}");
     }
-    if (success)
-        success = appendText(&body, &length, &capacity, "]\n");
-    if (success)
-        mg_http_reply(c, status, "Content-Type: application/json\r\n", "%s", body);
-    else
-        replyError(c, 500, "No se pudo construir la respuesta");
+    if (success) success = appendText(&body, &length, &capacity, "]\n");
+    if (success) mg_http_reply(c, status, "Content-Type: application/json\r\n", "%s", body);
+    else replyError(c, 500, "No se pudo construir la respuesta");
     free(body);
-}
-
-static void replyCommand(struct mg_connection *c, int status, PGresult *res) {
-    mg_http_reply(c, status, "Content-Type: application/json\r\n",
-                  "{\"updated\":%s}\n",
-                  strcmp(PQcmdTuples(res), "0") == 0 ? "false" : "true");
 }
 
 static char *jsonField(struct mg_http_message *hm, const char *field) {
     char path[80];
     snprintf(path, sizeof(path), "$.%s", field);
     char *value = mg_json_get_str(hm->body, path);
-    if (value != NULL)
-        return value;
-
+    if (value != NULL) return value;
     struct mg_str token = mg_json_get_tok(hm->body, path);
-    if (token.buf == NULL || !mg_json_get_num(hm->body, path, NULL))
-        return NULL;
+    if (token.buf == NULL || !mg_json_get_num(hm->body, path, NULL)) return NULL;
     value = malloc(token.len + 1);
-    if (value == NULL)
-        return NULL;
+    if (value == NULL) return NULL;
     memcpy(value, token.buf, token.len);
     value[token.len] = '\0';
     return value;
 }
 
-static bool jsonFieldFits(struct mg_http_message *hm, const char *field,
-                          size_t capacity) {
+static bool copyField(struct mg_http_message *hm, const char *field,
+                      char *destination, size_t capacity) {
     char path[80];
     snprintf(path, sizeof(path), "$.%s", field);
-    struct mg_str token = mg_json_get_tok(hm->body, path);
-    if (token.buf == NULL)
-        return true;
-    char *value = mg_json_get_str(hm->body, path);
-    if (value != NULL) {
-        bool fits = strlen(value) < capacity;
-        mg_free(value);
-        return fits;
-    }
-    bool numericField = strcmp(field, "edad") == 0 ||
-                        strcmp(field, "id_paciente") == 0 ||
-                        strcmp(field, "id_medicamento") == 0 ||
-                        strcmp(field, "cantidad") == 0;
-    return numericField && mg_json_get_num(hm->body, path, NULL) &&
-           token.len < capacity;
+    if (mg_json_get(hm->body, path, NULL) == MG_JSON_NOT_FOUND) return true;
+    char *value = jsonField(hm, field);
+    if (value == NULL) return false;
+    size_t length = strlen(value);
+    bool fits = length < capacity;
+    if (fits) memcpy(destination, value, length + 1);
+    mg_free(value);
+    return fits;
 }
 
-static bool requestFieldsFit(struct mg_http_message *hm, const char *resource) {
-    if (strcmp(resource, "tutores") == 0)
-        return jsonFieldFits(hm, "rut", sizeof(((Tutor *) 0)->rut)) &&
-               jsonFieldFits(hm, "nombre", sizeof(((Tutor *) 0)->nombre)) &&
-               jsonFieldFits(hm, "email", sizeof(((Tutor *) 0)->email)) &&
-               jsonFieldFits(hm, "telefono", sizeof(((Tutor *) 0)->telefono)) &&
-               jsonFieldFits(hm, "domicilio", sizeof(((Tutor *) 0)->domicilio));
-    if (strcmp(resource, "pacientes") == 0)
-        return jsonFieldFits(hm, "nombre", sizeof(((Paciente *) 0)->nombre) < 50 ?
-                             sizeof(((Paciente *) 0)->nombre) : 50) &&
-               jsonFieldFits(hm, "edad", sizeof(((Paciente *) 0)->edad)) &&
-               jsonFieldFits(hm, "sexo", sizeof(((Paciente *) 0)->sexo) < 2 ?
-                             sizeof(((Paciente *) 0)->sexo) : 2) &&
-               jsonFieldFits(hm, "especie", sizeof(((Paciente *) 0)->especie) < 20 ?
-                             sizeof(((Paciente *) 0)->especie) : 20) &&
-               jsonFieldFits(hm, "raza", sizeof(((Paciente *) 0)->raza) < 20 ?
-                             sizeof(((Paciente *) 0)->raza) : 20) &&
-               jsonFieldFits(hm, "color", sizeof(((Paciente *) 0)->color) < 30 ?
-                             sizeof(((Paciente *) 0)->color) : 30) &&
-               jsonFieldFits(hm, "tutor_fk", sizeof(((Paciente *) 0)->tutor_fk));
-    if (strcmp(resource, "agenda") == 0)
-        return jsonFieldFits(hm, "fecha_hora", sizeof(((Agenda *) 0)->fechaHora)) &&
-               jsonFieldFits(hm, "notas", sizeof(((Agenda *) 0)->notas)) &&
-               jsonFieldFits(hm, "id_paciente", sizeof(((Agenda *) 0)->idPaciente));
-    if (strcmp(resource, "fichas-medicas") == 0)
-        return jsonFieldFits(hm, "titulo", sizeof(((FichaMedica *) 0)->titulo) < 101 ?
-                             sizeof(((FichaMedica *) 0)->titulo) : 101) &&
-               jsonFieldFits(hm, "descripcion", sizeof(((FichaMedica *) 0)->descripcion)) &&
-               jsonFieldFits(hm, "id_paciente", sizeof(((FichaMedica *) 0)->idPaciente));
-    if (strcmp(resource, "recetas") == 0)
-        return jsonFieldFits(hm, "dosis", sizeof(((Receta *) 0)->dosis)) &&
-               jsonFieldFits(hm, "id_paciente", sizeof(((Receta *) 0)->idPaciente)) &&
-               jsonFieldFits(hm, "id_medicamento", sizeof(((Receta *) 0)->idMedicamnento));
-    if (strcmp(resource, "inventario") == 0)
-        return jsonFieldFits(hm, "cantidad", sizeof(((Inventario *) 0)->cantidad));
-    return true;
+static bool hasField(struct mg_http_message *hm, const char *field) {
+    char path[80];
+    snprintf(path, sizeof(path), "$.%s", field);
+    return mg_json_get(hm->body, path, NULL) >= 0;
 }
 
 static ApiSession *getSession(struct mg_http_message *hm) {
     struct mg_str *header = mg_http_get_header(hm, "Authorization");
-    if (header == NULL || header->len < 8 || memcmp(header->buf, "Bearer ", 7) != 0)
-        return NULL;
+    if (header == NULL || header->len < 8 || memcmp(header->buf, "Bearer ", 7) != 0) return NULL;
     for (int i = 0; i < MAX_SESSIONS; i++)
         if (sessions[i].token[0] && strlen(sessions[i].token) == header->len - 7 &&
             memcmp(sessions[i].token, header->buf + 7, header->len - 7) == 0)
@@ -211,112 +134,217 @@ static ApiSession *getSession(struct mg_http_message *hm) {
     return NULL;
 }
 
-static void loginRequest(struct mg_connection *c, struct mg_http_message *hm,
-                         PGconn *conn) {
+static void handleLogin(struct mg_connection *c, struct mg_http_message *hm,
+                        PGconn *conn) {
     char *rut = jsonField(hm, "rut"), *password = jsonField(hm, "password");
-    if (rut == NULL || password == NULL) {
-        mg_free(rut); mg_free(password);
-        replyError(c, 400, "Se requieren rut y password");
-        return;
-    }
-    if (strlen(rut) >= sizeof(((Sesion *) 0)->rut) ||
+    if (rut == NULL || password == NULL || strlen(rut) >= sizeof(((Sesion *) 0)->rut) ||
         strlen(password) >= sizeof(((Sesion *) 0)->psswd)) {
         mg_free(rut); mg_free(password);
-        replyError(c, 400, "Credenciales exceden el tamano permitido");
+        replyError(c, 400, "Credenciales faltantes o demasiado largas");
         return;
     }
     Sesion *auth = login(conn, rut, password);
     mg_free(password);
     if (auth == NULL) {
-        mg_free(rut);
-        replyError(c, 401, "Credenciales invalidas");
-        return;
+        mg_free(rut); replyError(c, 401, "Credenciales invalidas"); return;
     }
     ApiSession *slot = NULL;
     for (int i = 0; i < MAX_SESSIONS; i++) if (!sessions[i].token[0]) { slot = &sessions[i]; break; }
     if (slot == NULL || mg_random_str(slot->token, sizeof(slot->token)) == NULL) {
-        free(auth); mg_free(rut);
-        replyError(c, 503, "No se pudo crear la sesion");
-        return;
+        free(auth); mg_free(rut); replyError(c, 503, "No se pudo crear la sesion"); return;
     }
     snprintf(slot->rut, sizeof(slot->rut), "%s", auth->rut);
     mg_http_reply(c, 200, "Content-Type: application/json\r\n",
                   "{\"token\":\"%s\",\"token_type\":\"Bearer\"}\n", slot->token);
-    free(auth);
-    mg_free(rut);
+    free(auth); mg_free(rut);
 }
 
-static bool numberId(const char *s) {
-    if (s == NULL || *s == '\0') return false;
-    for (; *s; s++) if (!isdigit((unsigned char) *s)) return false;
+static bool numberId(const char *value) {
+    if (value == NULL || *value == '\0') return false;
+    for (const unsigned char *p = (const unsigned char *) value; *p; p++)
+        if (!isdigit(*p)) return false;
     return true;
 }
 
+static PGresult *handleTutores(struct mg_http_message *hm, PGconn *conn,
+                               const Sesion *sesion, const char *id,
+                               bool *created) {
+    bool get=mg_strcmp(hm->method,mg_str("GET"))==0;
+    bool post=mg_strcmp(hm->method,mg_str("POST"))==0;
+    bool put=mg_strcmp(hm->method,mg_str("PUT"))==0;
+    bool del=mg_strcmp(hm->method,mg_str("DELETE"))==0;
+    if(get) return id?tutorGet(conn,sesion,id):tutorList(conn,sesion);
+    if(del&&id) return tutorDelete(conn,sesion,id);
+    if(!post&&!(put&&id)) return NULL;
+    Tutor data={0};
+    if(!copyField(hm,"rut",data.rut,sizeof(data.rut))||
+       !copyField(hm,"nombre",data.nombre,sizeof(data.nombre))||
+       !copyField(hm,"email",data.email,sizeof(data.email))||
+       !copyField(hm,"telefono",data.telefono,sizeof(data.telefono))||
+       !copyField(hm,"domicilio",data.domicilio,sizeof(data.domicilio))) return NULL;
+    if(post){*created=true;return tutorCreate(conn,sesion,&data);}
+    if(!hasField(hm,"nombre")&&!hasField(hm,"email")&&
+       !hasField(hm,"telefono")&&!hasField(hm,"domicilio")) return NULL;
+    return tutorUpdate(conn,sesion,id,&data);
+}
+
+static PGresult *handlePacientes(struct mg_http_message *hm, PGconn *conn,
+                                 const Sesion *sesion, const char *id,
+                                 bool *created) {
+    bool get=mg_strcmp(hm->method,mg_str("GET"))==0;
+    bool post=mg_strcmp(hm->method,mg_str("POST"))==0;
+    bool put=mg_strcmp(hm->method,mg_str("PUT"))==0;
+    bool del=mg_strcmp(hm->method,mg_str("DELETE"))==0;
+    char tutorRut[32];
+    if(get&&id) return numberId(id)?pacienteGet(conn,sesion,id):NULL;
+    if(get&&mg_http_get_var(&hm->query,"tutor_fk",tutorRut,sizeof(tutorRut))>=0)
+        return pacienteListByTutor(conn,sesion,tutorRut);
+    if(get) return pacienteList(conn,sesion);
+    if(del&&id&&numberId(id)) return pacienteDelete(conn,sesion,id);
+    if(!post&&!(put&&id&&numberId(id))) return NULL;
+    Paciente data={0};
+    if(!copyField(hm,"nombre",data.nombre,50)||
+       !copyField(hm,"edad",data.edad,sizeof(data.edad))||
+       !copyField(hm,"sexo",data.sexo,2)||
+       !copyField(hm,"especie",data.especie,20)||
+       !copyField(hm,"raza",data.raza,20)||
+       !copyField(hm,"color",data.color,30)||
+       !copyField(hm,"tutor_fk",data.tutor_fk,sizeof(data.tutor_fk))) return NULL;
+    if(post){*created=true;return pacienteCreate(conn,sesion,&data);}
+    return pacienteUpdate(conn,sesion,id,&data);
+}
+
+static PGresult *handleAgenda(struct mg_http_message *hm, PGconn *conn,
+                              const Sesion *sesion, const char *id,
+                              bool *created) {
+    bool get=mg_strcmp(hm->method,mg_str("GET"))==0;
+    bool post=mg_strcmp(hm->method,mg_str("POST"))==0;
+    bool put=mg_strcmp(hm->method,mg_str("PUT"))==0;
+    bool del=mg_strcmp(hm->method,mg_str("DELETE"))==0;
+    char pacienteId[32];
+    if(get&&id) return numberId(id)?agendaGet(conn,sesion,id):NULL;
+    if(get&&mg_http_get_var(&hm->query,"id_paciente",pacienteId,sizeof(pacienteId))>=0)
+        return numberId(pacienteId)?agendaListByPaciente(conn,sesion,pacienteId):NULL;
+    if(get) return agendaList(conn,sesion);
+    if(del&&id&&numberId(id)) return agendaDelete(conn,sesion,id);
+    if(!post&&!(put&&id&&numberId(id))) return NULL;
+    Agenda data={0};
+    bool hasFecha=hasField(hm,"fecha_hora"), hasNotas=hasField(hm,"notas");
+    if(!copyField(hm,"fecha_hora",data.fechaHora,sizeof(data.fechaHora))||
+       !copyField(hm,"notas",data.notas,sizeof(data.notas))||
+       !copyField(hm,"id_paciente",data.idPaciente,sizeof(data.idPaciente))) return NULL;
+    if(post){*created=true;return agendaCreate(conn,sesion,&data);}
+    if(!hasFecha&&!hasNotas) return NULL;
+    return agendaUpdate(conn,sesion,id,&data,hasFecha,hasNotas);
+}
+
+static PGresult *handleFichasMedicas(struct mg_http_message *hm, PGconn *conn,
+                                     const Sesion *sesion, const char *id,
+                                     bool *created) {
+    bool get=mg_strcmp(hm->method,mg_str("GET"))==0;
+    bool post=mg_strcmp(hm->method,mg_str("POST"))==0;
+    bool put=mg_strcmp(hm->method,mg_str("PUT"))==0;
+    bool del=mg_strcmp(hm->method,mg_str("DELETE"))==0;
+    if(get&&id) return numberId(id)?fichaMedicaGet(conn,sesion,id):NULL;
+    if(get) return fichaMedicaList(conn,sesion);
+    if(del&&id&&numberId(id)) return fichaMedicaDelete(conn,sesion,id);
+    if(!post&&!(put&&id&&numberId(id))) return NULL;
+    FichaMedica data={0};
+    bool hasTitulo=hasField(hm,"titulo"), hasDescripcion=hasField(hm,"descripcion");
+    if(!copyField(hm,"titulo",data.titulo,sizeof(data.titulo))||
+       !copyField(hm,"descripcion",data.descripcion,sizeof(data.descripcion))||
+       !copyField(hm,"id_paciente",data.idPaciente,sizeof(data.idPaciente))) return NULL;
+    if(post){*created=true;return fichaMedicaCreate(conn,sesion,&data);}
+    if(!hasTitulo&&!hasDescripcion) return NULL;
+    return fichaMedicaUpdate(conn,sesion,id,&data,hasTitulo,hasDescripcion);
+}
+
+static PGresult *handleRecetas(struct mg_http_message *hm, PGconn *conn,
+                               const Sesion *sesion, const char *id,
+                               bool *created) {
+    bool get=mg_strcmp(hm->method,mg_str("GET"))==0;
+    bool post=mg_strcmp(hm->method,mg_str("POST"))==0;
+    bool put=mg_strcmp(hm->method,mg_str("PUT"))==0;
+    char pacienteId[32];
+    if(get&&id) return numberId(id)?recetaGet(conn,sesion,id):NULL;
+    if(get&&mg_http_get_var(&hm->query,"id_paciente",pacienteId,sizeof(pacienteId))>=0)
+        return numberId(pacienteId)?recetaListByPaciente(conn,sesion,pacienteId):NULL;
+    if(get) return recetaList(conn,sesion);
+    if(!post&&!(put&&id&&numberId(id))) return NULL;
+    Receta data={0};
+    if(!copyField(hm,"dosis",data.dosis,sizeof(data.dosis))||
+       !copyField(hm,"id_paciente",data.idPaciente,sizeof(data.idPaciente))||
+       !copyField(hm,"id_medicamento",data.idMedicamnento,sizeof(data.idMedicamnento))) return NULL;
+    if(post){*created=true;return recetaCreate(conn,sesion,&data);}
+    if(!hasField(hm,"dosis")) return NULL;
+    return recetaUpdate(conn,sesion,id,&data);
+}
+
+static PGresult *handleInventario(struct mg_http_message *hm, PGconn *conn,
+                                  const Sesion *sesion, const char *id,
+                                  bool *created) {
+    (void) created;
+    bool get=mg_strcmp(hm->method,mg_str("GET"))==0;
+    bool put=mg_strcmp(hm->method,mg_str("PUT"))==0;
+    if(get) return inventarioList(conn,sesion);
+    if(!put||!id||!numberId(id)) return NULL;
+    Inventario data={0};
+    if(!copyField(hm,"cantidad",data.cantidad,sizeof(data.cantidad))) return NULL;
+    return inventarioUpdate(conn,sesion,id,&data);
+}
+
+static void handleLogout(struct mg_connection *c, ApiSession *session) {
+    memset(session,0,sizeof(*session));
+    mg_http_reply(c,200,"Content-Type: application/json\r\n","{\"logged_out\":true}\n");
+}
+
+typedef PGresult *(*ResourceHandler)(struct mg_http_message *, PGconn *,
+    const Sesion *, const char *, bool *);
+
+typedef struct resource_route {
+    const char *name;
+    ResourceHandler handler;
+} ResourceRoute;
+
+static const ResourceRoute resourceRoutes[] = {
+    {"tutores", handleTutores},
+    {"pacientes", handlePacientes},
+    {"agenda", handleAgenda},
+    {"fichas-medicas", handleFichasMedicas},
+    {"recetas", handleRecetas},
+    {"inventario", handleInventario}
+};
+
 static void resourceRequest(struct mg_connection *c, struct mg_http_message *hm,
-                            PGconn *conn, ApiSession *session) {
+                            PGconn *conn, ApiSession *apiSession) {
     char path[256];
-    snprintf(path, sizeof(path), "%.*s", (int) hm->uri.len, hm->uri.buf);
-    char *query = strchr(path, '?'); if (query) *query = '\0';
-    char *parts[4] = {0}; int count = 0;
-    for (char *p = strtok(path, "/"); p && count < 4; p = strtok(NULL, "/")) parts[count++] = p;
-    if (count < 2 || strcmp(parts[0], "api") != 0) { replyError(c, 404, "Ruta no encontrada"); return; }
-    const char *resource = parts[1], *id = count > 2 ? parts[2] : NULL;
-    bool get = mg_strcmp(hm->method, mg_str("GET")) == 0;
-    bool post = mg_strcmp(hm->method, mg_str("POST")) == 0;
-    bool put = mg_strcmp(hm->method, mg_str("PUT")) == 0;
-    bool del = mg_strcmp(hm->method, mg_str("DELETE")) == 0;
-    if ((post || put) && !requestFieldsFit(hm, resource)) {
-        replyError(c, 400, "Un campo excede el tamano permitido o no es texto");
-        return;
-    }
-    const char *values[9] = {0}; int n = 0;
-    char *owned[8] = {0};
-    char filter[32];
-    const char *sql = NULL;
+    snprintf(path,sizeof(path),"%.*s",(int)hm->uri.len,hm->uri.buf);
+    char *query=strchr(path,'?'); if(query)*query='\0';
+    char *parts[4]={0}; int count=0;
+    for(char *part=strtok(path,"/");part&&count<4;part=strtok(NULL,"/"))parts[count++]=part;
+    if(count<2||count>3||strcmp(parts[0],"api")!=0){replyError(c,404,"Ruta no encontrada");return;}
 
-    if (strcmp(resource, "tutores") == 0) {
-        if (get && id) { values[n++] = id; values[n++] = session->rut; sql = "SELECT * FROM public.tutor WHERE rut=$1 AND doctor_fk=$2"; }
-        else if (get) { values[n++] = session->rut; sql = "SELECT * FROM public.tutor WHERE doctor_fk=$1 ORDER BY rut"; }
-        else if (post) { const char *fields[]={"rut","nombre","email","telefono","domicilio"}; for(int i=0;i<5;i++) values[n++]=owned[i]=jsonField(hm,fields[i]); values[n++]=session->rut; sql="INSERT INTO public.tutor(rut,nombre,email,telefono,domicilio,doctor_fk) VALUES($1,$2,$3,$4,$5,$6) RETURNING *"; }
-        else if (put && id) { const char *fieldNames[]={"nombre","email","telefono","domicilio"}; const char *queries[]={"UPDATE public.tutor SET nombre=$1 WHERE rut=$2 AND doctor_fk=$3 RETURNING *","UPDATE public.tutor SET email=$1 WHERE rut=$2 AND doctor_fk=$3 RETURNING *","UPDATE public.tutor SET telefono=$1 WHERE rut=$2 AND doctor_fk=$3 RETURNING *","UPDATE public.tutor SET domicilio=$1 WHERE rut=$2 AND doctor_fk=$3 RETURNING *"}; int found=0; for(int i=0;i<4;i++) if ((owned[0]=jsonField(hm,fieldNames[i]))!=NULL) { sql=queries[i]; values[n++]=owned[0]; values[n++]=id; values[n++]=session->rut; found=1; break; } if(!found) { replyError(c,400,"Campo de actualizacion requerido"); return; } }
-        else if (del && id) { values[n++]=id; values[n++]=session->rut; sql="DELETE FROM public.tutor WHERE rut=$1 AND doctor_fk=$2 RETURNING *"; }
-    } else if (strcmp(resource,"pacientes")==0) {
-        if(get&&id){values[n++]=id;values[n++]=session->rut;sql="SELECT * FROM public.paciente WHERE id=$1::integer AND doctor_fk=$2";}
-        else if(get){if(mg_http_get_var(&hm->query,"tutor_fk",filter,sizeof(filter))>=0){values[n++]=filter;values[n++]=session->rut;sql="SELECT * FROM public.paciente WHERE tutor_fk=$1 AND doctor_fk=$2 ORDER BY id";}else{values[n++]=session->rut;sql="SELECT * FROM public.paciente WHERE doctor_fk=$1 ORDER BY id";}}
-        else if(post){const char *f[]={"nombre","edad","sexo","especie","raza","color","tutor_fk"};for(int i=0;i<7;i++)values[n++]=owned[i]=jsonField(hm,f[i]);values[n++]=session->rut;sql="INSERT INTO public.paciente(nombre,edad,sexo,especie,raza,color,tutor_fk,doctor_fk) VALUES($1,NULLIF($2,'')::integer,NULLIF($3,''),$4,NULLIF($5,''),NULLIF($6,''),NULLIF($7,''),$8) RETURNING *";}
-        else if((put||del)&&id&&numberId(id)){if(del){values[n++]=id;values[n++]=session->rut;sql="DELETE FROM public.paciente WHERE id=$1::integer AND doctor_fk=$2 RETURNING *";}else{owned[0]=jsonField(hm,"nombre");owned[1]=jsonField(hm,"edad");owned[2]=jsonField(hm,"sexo");owned[3]=jsonField(hm,"especie");owned[4]=jsonField(hm,"raza");owned[5]=jsonField(hm,"color");owned[6]=jsonField(hm,"tutor_fk");values[n++]=owned[0]?owned[0]:"";values[n++]=owned[1]?owned[1]:"";values[n++]=owned[2]?owned[2]:"";values[n++]=owned[3]?owned[3]:"";values[n++]=owned[4]?owned[4]:"";values[n++]=owned[5]?owned[5]:"";values[n++]=owned[6]?owned[6]:"";values[n++]=id;values[n++]=session->rut;sql="UPDATE public.paciente SET nombre=COALESCE(NULLIF($1,''),nombre),edad=COALESCE(NULLIF($2,'')::integer,edad),sexo=COALESCE(NULLIF($3,''),sexo),especie=COALESCE(NULLIF($4,''),especie),raza=COALESCE(NULLIF($5,''),raza),color=COALESCE(NULLIF($6,''),color),tutor_fk=COALESCE(NULLIF($7,''),tutor_fk) WHERE id=$8::integer AND doctor_fk=$9 RETURNING *";}}
-    } else if (strcmp(resource,"agenda")==0) {
-        if(get&&id&&numberId(id)){values[n++]=id;values[n++]=session->rut;sql="SELECT a.* FROM public.agenda a JOIN public.paciente p ON p.id=a.id_paciente_fk WHERE a.id=$1::integer AND p.doctor_fk=$2";}
-        else if(get){if(mg_http_get_var(&hm->query,"id_paciente",filter,sizeof(filter))>=0&&numberId(filter)){values[n++]=filter;values[n++]=session->rut;sql="SELECT a.* FROM public.agenda a JOIN public.paciente p ON p.id=a.id_paciente_fk WHERE p.id=$1::integer AND p.doctor_fk=$2 ORDER BY a.fecha_hora";}else{values[n++]=session->rut;sql="SELECT a.* FROM public.agenda a JOIN public.paciente p ON p.id=a.id_paciente_fk WHERE p.doctor_fk=$1 ORDER BY a.fecha_hora";}}
-        else if(post){owned[0]=jsonField(hm,"fecha_hora");owned[1]=jsonField(hm,"notas");owned[2]=jsonField(hm,"id_paciente");values[n++]=owned[0];values[n++]=owned[1]?owned[1]:"";values[n++]=owned[2];values[n++]=session->rut;sql="INSERT INTO public.agenda(fecha_hora,notas,id_paciente_fk) SELECT $1::timestamptz,NULLIF($2,''),p.id FROM public.paciente p WHERE p.id=$3::integer AND p.doctor_fk=$4 RETURNING *";}
-        else if(put&&id&&numberId(id)){owned[0]=jsonField(hm,"fecha_hora");owned[1]=jsonField(hm,"notas");if(owned[0]){values[n++]=owned[0];values[n++]=id;values[n++]=session->rut;sql="UPDATE public.agenda a SET fecha_hora=$1::timestamptz FROM public.paciente p WHERE a.id=$2::integer AND p.id=a.id_paciente_fk AND p.doctor_fk=$3 RETURNING a.*";}else if(owned[1]){values[n++]=owned[1];values[n++]=id;values[n++]=session->rut;sql="UPDATE public.agenda a SET notas=NULLIF($1,'') FROM public.paciente p WHERE a.id=$2::integer AND p.id=a.id_paciente_fk AND p.doctor_fk=$3 RETURNING a.*";}}
-        else if(del&&id&&numberId(id)){values[n++]=id;values[n++]=session->rut;sql="DELETE FROM public.agenda a USING public.paciente p WHERE a.id=$1::integer AND p.id=a.id_paciente_fk AND p.doctor_fk=$2 RETURNING a.*";}
-    } else if(strcmp(resource,"fichas-medicas")==0){
-        if(get&&id){values[n++]=id;values[n++]=session->rut;sql="SELECT f.* FROM public.ficha_medica f JOIN public.paciente p ON p.id=f.id_paciente_fk WHERE f.id=$1::integer AND p.doctor_fk=$2";}
-        else if(get){values[n++]=session->rut;sql="SELECT f.* FROM public.ficha_medica f JOIN public.paciente p ON p.id=f.id_paciente_fk WHERE p.doctor_fk=$1 ORDER BY f.id";}
-        else if(post){owned[0]=jsonField(hm,"titulo");owned[1]=jsonField(hm,"descripcion");owned[2]=jsonField(hm,"id_paciente");values[n++]=owned[0];values[n++]=owned[1];values[n++]=owned[2];values[n++]=session->rut;sql="INSERT INTO public.ficha_medica(titulo,descripcion,id_paciente_fk) SELECT $1,$2,p.id FROM public.paciente p WHERE p.id=$3::integer AND p.doctor_fk=$4 RETURNING *";}
-        else if(put&&id){owned[0]=jsonField(hm,"titulo");owned[1]=jsonField(hm,"descripcion");values[n++]=owned[0];values[n++]=owned[1];values[n++]=id;values[n++]=session->rut;sql="UPDATE public.ficha_medica f SET titulo=COALESCE($1,titulo),descripcion=COALESCE($2,descripcion) FROM public.paciente p WHERE f.id=$3::integer AND p.id=f.id_paciente_fk AND p.doctor_fk=$4 RETURNING f.*";}
-        else if(del&&id){values[n++]=id;values[n++]=session->rut;sql="DELETE FROM public.ficha_medica f USING public.paciente p WHERE f.id=$1::integer AND p.id=f.id_paciente_fk AND p.doctor_fk=$2 RETURNING f.*";}
-    } else if(strcmp(resource,"recetas")==0){
-        if(get&&id){values[n++]=id;values[n++]=session->rut;sql="SELECT r.* FROM public.receta r JOIN public.paciente p ON p.id=r.paciente_fk WHERE r.id=$1::integer AND p.doctor_fk=$2";}
-        else if(get){if(mg_http_get_var(&hm->query,"id_paciente",filter,sizeof(filter))>=0&&numberId(filter)){values[n++]=filter;values[n++]=session->rut;sql="SELECT r.* FROM public.receta r JOIN public.paciente p ON p.id=r.paciente_fk WHERE p.id=$1::integer AND p.doctor_fk=$2 ORDER BY r.id";}else{values[n++]=session->rut;sql="SELECT r.* FROM public.receta r JOIN public.paciente p ON p.id=r.paciente_fk WHERE p.doctor_fk=$1 ORDER BY r.id";}}
-        else if(post){owned[0]=jsonField(hm,"dosis");owned[1]=jsonField(hm,"id_paciente");owned[2]=jsonField(hm,"id_medicamento");values[n++]=owned[0];values[n++]=owned[1];values[n++]=owned[2];values[n++]=session->rut;sql="INSERT INTO public.receta(dosis,paciente_fk,medicamento_fk) SELECT $1,p.id,m.id FROM public.paciente p CROSS JOIN public.medicamentos m WHERE p.id=$2::integer AND m.id=$3::integer AND p.doctor_fk=$4 RETURNING *";}
-        else if(put&&id){owned[0]=jsonField(hm,"dosis");values[n++]=owned[0];values[n++]=id;values[n++]=session->rut;sql="UPDATE public.receta r SET dosis=$1 FROM public.paciente p WHERE r.id=$2::integer AND p.id=r.paciente_fk AND p.doctor_fk=$3 RETURNING r.*";}
-    } else if(strcmp(resource,"inventario")==0){
-        if(get){values[n++]=session->rut;sql="SELECT i.id AS instrumento_id,i.nombre,inv.cantidad FROM public.inventario inv JOIN public.instrumentos i ON i.id=inv.instrumento_fk WHERE inv.doctor_fk=$1 ORDER BY i.nombre";}
-        else if(put&&id&&numberId(id)){owned[0]=jsonField(hm,"cantidad");values[n++]=owned[0];values[n++]=id;values[n++]=session->rut;sql="UPDATE public.inventario SET cantidad=$1::integer WHERE instrumento_fk=$2::integer AND doctor_fk=$3 RETURNING *";}
+    Sesion sesion={0};
+    snprintf(sesion.rut,sizeof(sesion.rut),"%s",apiSession->rut);
+    const char *id=count>2?parts[2]:NULL;
+    bool created=false;
+    PGresult *res=NULL;
+    bool knownRoute=false;
+    for(size_t i=0;i<sizeof(resourceRoutes)/sizeof(resourceRoutes[0]);i++) {
+        if(strcmp(parts[1],resourceRoutes[i].name)==0) {
+            knownRoute=true;
+            res=resourceRoutes[i].handler(hm,conn,&sesion,id,&created);
+            break;
+        }
     }
-
-    if (sql == NULL) { for(int i=0;i<8;i++) mg_free(owned[i]); replyError(c, 404, "Ruta o metodo no soportado"); return; }
-    PGresult *res = PQexecParams(conn, sql, n, NULL, values, NULL, NULL, 0);
-    for(int i=0;i<8;i++) mg_free(owned[i]);
-    if (res == NULL || (PQresultStatus(res) != PGRES_TUPLES_OK && PQresultStatus(res) != PGRES_COMMAND_OK)) {
-        if(res) PQclear(res);
-        replyError(c, 400, "La consulta no pudo completarse");
-        return;
+    if(!knownRoute){replyError(c,404,"Ruta no encontrada");return;}
+    if(res==NULL){replyError(c,400,"Ruta, metodo o datos invalidos");return;}
+    if(PQresultStatus(res)!=PGRES_TUPLES_OK){PQclear(res);replyError(c,400,"La operacion no pudo completarse");return;}
+    if(PQntuples(res)==0 && (created || mg_strcmp(hm->method,mg_str("PUT"))==0 ||
+       mg_strcmp(hm->method,mg_str("DELETE"))==0)){
+        PQclear(res);replyError(c,404,"Registro inexistente o sin acceso");return;
     }
-    if(PQresultStatus(res)==PGRES_TUPLES_OK) replyResult(c, (post?201:200), res);
-    else replyCommand(c, 200, res);
+    replyResult(c,created?201:200,res);
     PQclear(res);
 }
 
@@ -325,17 +353,15 @@ void apiEventHandler(struct mg_connection *c, int ev, void *ev_data) {
     struct mg_http_message *hm = (struct mg_http_message *) ev_data;
     ApiContext *ctx = (ApiContext *) c->fn_data;
     if (ctx == NULL || ctx->conn == NULL || PQstatus(ctx->conn) != CONNECTION_OK) {
-        replyError(c, 503, "Base de datos no disponible"); return;
+        replyError(c,503,"Base de datos no disponible");return;
     }
-    if (mg_strcmp(hm->uri, mg_str("/api/auth/login")) == 0 && mg_strcmp(hm->method, mg_str("POST")) == 0) {
-        loginRequest(c, hm, ctx->conn); return;
+    if (mg_strcmp(hm->uri,mg_str("/api/auth/login"))==0 && mg_strcmp(hm->method,mg_str("POST"))==0) {
+        handleLogin(c,hm,ctx->conn);return;
     }
-    ApiSession *session = getSession(hm);
-    if (session == NULL) { replyError(c, 401, "Autenticacion requerida"); return; }
-    if (mg_strcmp(hm->uri, mg_str("/api/auth/logout")) == 0 && mg_strcmp(hm->method, mg_str("POST")) == 0) {
-        memset(session, 0, sizeof(*session));
-        mg_http_reply(c, 200, "Content-Type: application/json\r\n", "{\"logged_out\":true}\n");
-        return;
+    ApiSession *session=getSession(hm);
+    if(session==NULL){replyError(c,401,"Autenticacion requerida");return;}
+    if(mg_strcmp(hm->uri,mg_str("/api/auth/logout"))==0 && mg_strcmp(hm->method,mg_str("POST"))==0){
+        handleLogout(c,session);return;
     }
-    resourceRequest(c, hm, ctx->conn, session);
+    resourceRequest(c,hm,ctx->conn,session);
 }

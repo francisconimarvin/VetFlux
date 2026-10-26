@@ -25,8 +25,6 @@ target_sources(VetLibrary
         src/db.c
         src/tutor.c
         src/paciente.c
-        src/menu.c
-        src/utils.c
         src/login.c
         src/agenda.c
         src/inventario.c
@@ -44,8 +42,6 @@ target_sources(VetLibrary
             include/db.h
             include/tutor.h
             include/paciente.h
-            include/menu.h
-            include/utils.h
             include/login.h
             include/agenda.h
             include/inventario.h

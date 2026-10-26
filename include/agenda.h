@@ -2,6 +2,7 @@
 #define AGENDA_H
 
 #include <stdio.h>
+#include <stdbool.h>
 #include "login.h"
 #include <libpq-fe.h>
 
@@ -12,10 +13,11 @@ typedef struct agenda
     char idPaciente[4];
 } Agenda;
 
-void createAgenda(PGconn *conn, const Sesion *sesion);
-void readAllAgenda(PGconn *conn, const Sesion *sesion);
-void readAgenda(PGconn *conn, const Sesion *sesion);
-void updateAgenda(PGconn *conn, const Sesion *sesion);
-void deleteAgenda(PGconn *conn, const Sesion *sesion);
+PGresult *agendaList(PGconn *conn, const Sesion *sesion);
+PGresult *agendaGet(PGconn *conn, const Sesion *sesion, const char *id);
+PGresult *agendaListByPaciente(PGconn *conn, const Sesion *sesion, const char *pacienteId);
+PGresult *agendaCreate(PGconn *conn, const Sesion *sesion, const Agenda *agenda);
+PGresult *agendaUpdate(PGconn *conn, const Sesion *sesion, const char *id, const Agenda *agenda, bool hasFecha, bool hasNotas);
+PGresult *agendaDelete(PGconn *conn, const Sesion *sesion, const char *id);
 
 #endif

@@ -12,7 +12,7 @@ DATABASE_URL='postgresql://usuario:clave@localhost:5432/VetFlux' PORT=8000 ./bui
 
 ## Recursos
 
-Todas las rutas devuelven JSON. Las operaciones de actualización y borrado filtran por el veterinario autenticado.
+Todas las rutas devuelven JSON. Las operaciones de actualización y borrado filtran por el veterinario autenticado. Los valores no nulos de PostgreSQL se serializan como cadenas; `null` se conserva como JSON `null`.
 
 | Recurso | Rutas |
 | --- | --- |
@@ -23,7 +23,16 @@ Todas las rutas devuelven JSON. Las operaciones de actualización y borrado filt
 | Recetas | `/api/recetas`, `/api/recetas/{id}`, `/api/recetas?id_paciente={id}` |
 | Inventario | `GET /api/inventario`, `PUT /api/inventario/{instrumento_id}` |
 
-Se usan `GET` para consultar, `POST` para crear, `PUT` para actualizar y `DELETE` para borrar cuando el recurso admite esa operación. Los campos de creación coinciden con las columnas del esquema: paciente usa `nombre`, `edad`, `sexo`, `especie`, `raza`, `color`, `tutor_fk`; agenda usa `fecha_hora`, `notas`, `id_paciente`; ficha médica usa `titulo`, `descripcion`, `id_paciente`; receta usa `dosis`, `id_paciente`, `id_medicamento`; inventario usa `cantidad` en el cuerpo.
+Se usan `GET` para consultar, `POST` para crear, `PUT` para actualizar y `DELETE` para borrar cuando el recurso admite esa operación. `PUT` acepta los campos que se quieren modificar. Los cuerpos son objetos JSON y respetan los tamaños de las estructuras C y de las columnas SQL:
+
+- Tutor: `rut`, `nombre`, `email`, `telefono`, `domicilio`.
+- Paciente: `nombre`, `edad`, `sexo`, `especie`, `raza`, `color`, `tutor_fk`.
+- Agenda: `fecha_hora`, `notas`, `id_paciente`.
+- Ficha médica: `titulo`, `descripcion`, `id_paciente`.
+- Receta: `dosis`, `id_paciente`, `id_medicamento`.
+- Inventario: `cantidad`.
+
+Las operaciones SQL están en sus módulos (`tutor.c`, `paciente.c`, `agenda.c`, `fichaMedica.c`, `receta.c`, `inventario.c`). `api.c` convierte la solicitud HTTP en una llamada a esas operaciones.
 
 ## Compilación
 

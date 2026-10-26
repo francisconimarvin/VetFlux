@@ -13,10 +13,10 @@ typedef struct tutor {
     char domicilio[200];
 } Tutor;
 
-void createTutor(PGconn *conn, const Sesion *sesion);
-void readAllTutor(PGconn *conn, const Sesion *sesion);
-void readTutor(PGconn *conn, const Sesion *sesion);
-void updateTutor(PGconn *conn, const Sesion *sesion);
-void deleteTutor(PGconn *conn, const Sesion *sesion);
+PGresult *tutorList(PGconn *conn, const Sesion *sesion);
+PGresult *tutorGet(PGconn *conn, const Sesion *sesion, const char *rut);
+PGresult *tutorCreate(PGconn *conn, const Sesion *sesion, const Tutor *tutor);
+PGresult *tutorUpdate(PGconn *conn, const Sesion *sesion, const char *rut, const Tutor *tutor);
+PGresult *tutorDelete(PGconn *conn, const Sesion *sesion, const char *rut);
 
 #endif

@@ -18,10 +18,11 @@ typedef struct paciente
     char doctor_fk[16];
 } Paciente;
 
-void createPaciente(PGconn *conn, const Sesion *sesion);
-void readAllPaciente(PGconn *conn, const Sesion *sesion);
-void readPaciente(PGconn *conn, const Sesion *sesion);
-void updatePaciente(PGconn *conn, const Sesion *sesion);
-void deletePaciente(PGconn *conn, const Sesion *sesion);
+PGresult *pacienteList(PGconn *conn, const Sesion *sesion);
+PGresult *pacienteGet(PGconn *conn, const Sesion *sesion, const char *id);
+PGresult *pacienteListByTutor(PGconn *conn, const Sesion *sesion, const char *tutorRut);
+PGresult *pacienteCreate(PGconn *conn, const Sesion *sesion, const Paciente *paciente);
+PGresult *pacienteUpdate(PGconn *conn, const Sesion *sesion, const char *id, const Paciente *paciente);
+PGresult *pacienteDelete(PGconn *conn, const Sesion *sesion, const char *id);
 
 #endif
