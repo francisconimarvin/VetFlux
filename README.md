@@ -15,6 +15,7 @@
 - PostgreSQL
 - CMake
 - Argon2
+- Mongoose
 
 # ¿Quieres utilizar el sistema en una página ya creada? 
 - TODO: Página.
