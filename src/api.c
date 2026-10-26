@@ -4,6 +4,12 @@
 #include <ctype.h>
 #include "api.h"
 #include "login.h"
+#include "tutor.h"
+#include "paciente.h"
+#include "agenda.h"
+#include "inventario.h"
+#include "fichaMedica.h"
+#include "receta.h"
 
 #define MAX_SESSIONS 128
 #define TOKEN_SIZE 65
@@ -20,50 +26,94 @@ static void replyError(struct mg_connection *c, int status, const char *message)
                   "{\"error\":\"%s\"}\n", message);
 }
 
-static void jsonString(struct mg_connection *c, const char *value) {
-    mg_printf(c, "\"");
-    for (const unsigned char *p = (const unsigned char *) value; *p; p++) {
-        if (*p == '"' || *p == '\\') mg_printf(c, "\\%c", *p);
-        else if (*p < 0x20) mg_printf(c, " ");
-        else mg_printf(c, "%c", *p);
+static bool appendBytes(char **body, size_t *length, size_t *capacity,
+                        const char *value, size_t valueLength) {
+    if (valueLength > (size_t) -1 - *length - 1)
+        return false;
+
+    size_t needed = *length + valueLength + 1;
+    if (needed > *capacity) {
+        size_t newCapacity = *capacity == 0 ? 256 : *capacity;
+        while (newCapacity < needed) {
+            if (newCapacity > (size_t) -1 / 2) {
+                newCapacity = needed;
+                break;
+            }
+            newCapacity *= 2;
+        }
+        char *newBody = realloc(*body, newCapacity);
+        if (newBody == NULL)
+            return false;
+        *body = newBody;
+        *capacity = newCapacity;
     }
-    mg_printf(c, "\"");
+
+    memcpy(*body + *length, value, valueLength);
+    *length += valueLength;
+    (*body)[*length] = '\0';
+    return true;
+}
+
+static bool appendText(char **body, size_t *length, size_t *capacity,
+                       const char *value) {
+    return appendBytes(body, length, capacity, value, strlen(value));
+}
+
+static bool appendJsonString(char **body, size_t *length, size_t *capacity,
+                             const char *value) {
+    if (!appendText(body, length, capacity, "\""))
+        return false;
+    for (const unsigned char *p = (const unsigned char *) value; *p; p++) {
+        char escaped[2];
+        size_t escapedLength = 1;
+        if (*p == '"' || *p == '\\') {
+            escaped[0] = '\\';
+            escaped[1] = (char) *p;
+            escapedLength = 2;
+        } else {
+            escaped[0] = *p < 0x20 ? ' ' : (char) *p;
+        }
+        if (!appendBytes(body, length, capacity, escaped, escapedLength))
+            return false;
+    }
+    return appendText(body, length, capacity, "\"");
 }
 
 static void replyResult(struct mg_connection *c, int status, PGresult *res) {
     int rows = PQntuples(res), cols = PQnfields(res);
-    size_t size = 3;
-    for (int i = 0; i < cols; i++) size += strlen(PQfname(res, i)) * 6 + 8;
-    for (int i = 0; i < rows; i++) for (int j = 0; j < cols; j++)
-        size += (PQgetisnull(res, i, j) ? 4 : strlen(PQgetvalue(res, i, j)) * 6 + 2) + 4;
-    char *body = calloc(size, 1);
-    if (body == NULL) { replyError(c, 500, "Sin memoria"); return; }
-    size_t ofs = 0;
-    body[ofs++] = '[';
+    char *body = NULL;
+    size_t length = 0, capacity = 0;
+    bool success = appendText(&body, &length, &capacity, "[");
     for (int i = 0; i < rows; i++) {
-        ofs += (size_t) snprintf(body + ofs, size - ofs, "%s{", i ? "," : "");
+        if (success && i > 0)
+            success = appendText(&body, &length, &capacity, ",");
+        if (success)
+            success = appendText(&body, &length, &capacity, "{");
         for (int j = 0; j < cols; j++) {
             const char *key = PQfname(res, j), *value = PQgetvalue(res, i, j);
-            ofs += (size_t) snprintf(body + ofs, size - ofs, "%s\"", j ? "," : "");
-            for (const unsigned char *p = (const unsigned char *) key; *p; p++) {
-                if (*p == '"' || *p == '\\') body[ofs++] = '\\';
-                body[ofs++] = *p < 0x20 ? ' ' : (char) *p;
-            }
-            body[ofs++] = '"'; body[ofs++] = ':';
-            if (PQgetisnull(res, i, j)) { memcpy(body + ofs, "null", 4); ofs += 4; }
-            else {
-                body[ofs++] = '"';
-                for (const unsigned char *p = (const unsigned char *) value; *p; p++) {
-                    if (*p == '"' || *p == '\\') body[ofs++] = '\\';
-                    body[ofs++] = *p < 0x20 ? ' ' : (char) *p;
-                }
-                body[ofs++] = '"';
+            if (!success)
+                break;
+            if (j > 0)
+                success = appendText(&body, &length, &capacity, ",");
+            if (success)
+                success = appendJsonString(&body, &length, &capacity, key);
+            if (success)
+                success = appendText(&body, &length, &capacity, ":");
+            if (success && PQgetisnull(res, i, j)) {
+                success = appendText(&body, &length, &capacity, "null");
+            } else if (success) {
+                success = appendJsonString(&body, &length, &capacity, value);
             }
         }
-        body[ofs++] = '}';
+        if (success)
+            success = appendText(&body, &length, &capacity, "}");
     }
-    body[ofs++] = ']'; body[ofs++] = '\n'; body[ofs] = '\0';
-    mg_http_reply(c, status, "Content-Type: application/json\r\n", "%s", body);
+    if (success)
+        success = appendText(&body, &length, &capacity, "]\n");
+    if (success)
+        mg_http_reply(c, status, "Content-Type: application/json\r\n", "%s", body);
+    else
+        replyError(c, 500, "No se pudo construir la respuesta");
     free(body);
 }
 
@@ -76,7 +126,78 @@ static void replyCommand(struct mg_connection *c, int status, PGresult *res) {
 static char *jsonField(struct mg_http_message *hm, const char *field) {
     char path[80];
     snprintf(path, sizeof(path), "$.%s", field);
-    return mg_json_get_str(hm->body, path);
+    char *value = mg_json_get_str(hm->body, path);
+    if (value != NULL)
+        return value;
+
+    struct mg_str token = mg_json_get_tok(hm->body, path);
+    if (token.buf == NULL || !mg_json_get_num(hm->body, path, NULL))
+        return NULL;
+    value = malloc(token.len + 1);
+    if (value == NULL)
+        return NULL;
+    memcpy(value, token.buf, token.len);
+    value[token.len] = '\0';
+    return value;
+}
+
+static bool jsonFieldFits(struct mg_http_message *hm, const char *field,
+                          size_t capacity) {
+    char path[80];
+    snprintf(path, sizeof(path), "$.%s", field);
+    struct mg_str token = mg_json_get_tok(hm->body, path);
+    if (token.buf == NULL)
+        return true;
+    char *value = mg_json_get_str(hm->body, path);
+    if (value != NULL) {
+        bool fits = strlen(value) < capacity;
+        mg_free(value);
+        return fits;
+    }
+    bool numericField = strcmp(field, "edad") == 0 ||
+                        strcmp(field, "id_paciente") == 0 ||
+                        strcmp(field, "id_medicamento") == 0 ||
+                        strcmp(field, "cantidad") == 0;
+    return numericField && mg_json_get_num(hm->body, path, NULL) &&
+           token.len < capacity;
+}
+
+static bool requestFieldsFit(struct mg_http_message *hm, const char *resource) {
+    if (strcmp(resource, "tutores") == 0)
+        return jsonFieldFits(hm, "rut", sizeof(((Tutor *) 0)->rut)) &&
+               jsonFieldFits(hm, "nombre", sizeof(((Tutor *) 0)->nombre)) &&
+               jsonFieldFits(hm, "email", sizeof(((Tutor *) 0)->email)) &&
+               jsonFieldFits(hm, "telefono", sizeof(((Tutor *) 0)->telefono)) &&
+               jsonFieldFits(hm, "domicilio", sizeof(((Tutor *) 0)->domicilio));
+    if (strcmp(resource, "pacientes") == 0)
+        return jsonFieldFits(hm, "nombre", sizeof(((Paciente *) 0)->nombre) < 50 ?
+                             sizeof(((Paciente *) 0)->nombre) : 50) &&
+               jsonFieldFits(hm, "edad", sizeof(((Paciente *) 0)->edad)) &&
+               jsonFieldFits(hm, "sexo", sizeof(((Paciente *) 0)->sexo) < 2 ?
+                             sizeof(((Paciente *) 0)->sexo) : 2) &&
+               jsonFieldFits(hm, "especie", sizeof(((Paciente *) 0)->especie) < 20 ?
+                             sizeof(((Paciente *) 0)->especie) : 20) &&
+               jsonFieldFits(hm, "raza", sizeof(((Paciente *) 0)->raza) < 20 ?
+                             sizeof(((Paciente *) 0)->raza) : 20) &&
+               jsonFieldFits(hm, "color", sizeof(((Paciente *) 0)->color) < 30 ?
+                             sizeof(((Paciente *) 0)->color) : 30) &&
+               jsonFieldFits(hm, "tutor_fk", sizeof(((Paciente *) 0)->tutor_fk));
+    if (strcmp(resource, "agenda") == 0)
+        return jsonFieldFits(hm, "fecha_hora", sizeof(((Agenda *) 0)->fechaHora)) &&
+               jsonFieldFits(hm, "notas", sizeof(((Agenda *) 0)->notas)) &&
+               jsonFieldFits(hm, "id_paciente", sizeof(((Agenda *) 0)->idPaciente));
+    if (strcmp(resource, "fichas-medicas") == 0)
+        return jsonFieldFits(hm, "titulo", sizeof(((FichaMedica *) 0)->titulo) < 101 ?
+                             sizeof(((FichaMedica *) 0)->titulo) : 101) &&
+               jsonFieldFits(hm, "descripcion", sizeof(((FichaMedica *) 0)->descripcion)) &&
+               jsonFieldFits(hm, "id_paciente", sizeof(((FichaMedica *) 0)->idPaciente));
+    if (strcmp(resource, "recetas") == 0)
+        return jsonFieldFits(hm, "dosis", sizeof(((Receta *) 0)->dosis)) &&
+               jsonFieldFits(hm, "id_paciente", sizeof(((Receta *) 0)->idPaciente)) &&
+               jsonFieldFits(hm, "id_medicamento", sizeof(((Receta *) 0)->idMedicamnento));
+    if (strcmp(resource, "inventario") == 0)
+        return jsonFieldFits(hm, "cantidad", sizeof(((Inventario *) 0)->cantidad));
+    return true;
 }
 
 static ApiSession *getSession(struct mg_http_message *hm) {
@@ -96,6 +217,12 @@ static void loginRequest(struct mg_connection *c, struct mg_http_message *hm,
     if (rut == NULL || password == NULL) {
         mg_free(rut); mg_free(password);
         replyError(c, 400, "Se requieren rut y password");
+        return;
+    }
+    if (strlen(rut) >= sizeof(((Sesion *) 0)->rut) ||
+        strlen(password) >= sizeof(((Sesion *) 0)->psswd)) {
+        mg_free(rut); mg_free(password);
+        replyError(c, 400, "Credenciales exceden el tamano permitido");
         return;
     }
     Sesion *auth = login(conn, rut, password);
@@ -138,7 +265,11 @@ static void resourceRequest(struct mg_connection *c, struct mg_http_message *hm,
     bool post = mg_strcmp(hm->method, mg_str("POST")) == 0;
     bool put = mg_strcmp(hm->method, mg_str("PUT")) == 0;
     bool del = mg_strcmp(hm->method, mg_str("DELETE")) == 0;
-    const char *values[8] = {0}; int n = 0;
+    if ((post || put) && !requestFieldsFit(hm, resource)) {
+        replyError(c, 400, "Un campo excede el tamano permitido o no es texto");
+        return;
+    }
+    const char *values[9] = {0}; int n = 0;
     char *owned[8] = {0};
     char filter[32];
     const char *sql = NULL;
