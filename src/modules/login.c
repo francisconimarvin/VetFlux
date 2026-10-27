@@ -70,3 +70,12 @@ Sesion *login(PGconn *conn, const char *rut, const char *passwd)
 
     return sesion;
 } 
+
+void logout(Sesion *sesion)
+{
+    if (sesion == NULL)
+        return;
+
+    memset(sesion, 0, sizeof(*sesion));
+    free(sesion);
+}

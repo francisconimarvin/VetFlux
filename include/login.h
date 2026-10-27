@@ -11,4 +11,5 @@ typedef struct sesion
 } Sesion;
 
 Sesion *login(PGconn *conn, const char *rut, const char *passwd);
+void logout(Sesion *sesion);
 #endif

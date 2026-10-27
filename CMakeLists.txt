@@ -8,20 +8,23 @@ set(CMAKE_C_EXTENSIONS ON)
 
 add_library(VetLibrary)
 
+add_executable(VetFlux src/main.c)
+
 find_package(PostgreSQL REQUIRED)
 
 target_link_libraries(VetLibrary PUBLIC argon2 PostgreSQL::PostgreSQL)
+target_link_libraries(VetFlux PRIVATE VetLibrary)
 
 target_sources(VetLibrary
     PRIVATE
-        src/db.c
-        src/tutor.c
-        src/paciente.c
-        src/login.c
-        src/agenda.c
-        src/inventario.c
-        src/fichaMedica.c
-        src/receta.c
+        src/modules/db.c
+        src/modules/tutor.c
+        src/modules/paciente.c
+        src/modules/login.c
+        src/modules/agenda.c
+        src/modules/inventario.c
+        src/modules/fichaMedica.c
+        src/modules/receta.c
     PUBLIC 
         FILE_SET HEADERS
         TYPE HEADERS
