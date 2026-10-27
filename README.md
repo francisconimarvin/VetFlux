@@ -15,10 +15,17 @@
 - PostgreSQL
 - CMake
 - Argon2
-- Mongoose
+- libpq
 
-# ¿Quieres utilizar el sistema en una página ya creada? 
-- TODO: Página.
+El proyecto contiene los módulos de acceso a datos y autenticación como una
+biblioteca C. No incluye una interfaz de terminal ni un servidor HTTP.
 
-Contáctame aquí:  
+La conexión PostgreSQL usa la configuración estándar de libpq. Puedes definir
+el host, usuario y base de datos mediante las variables `PGHOST`, `PGUSER` y
+`PGDATABASE`; libpq lee la contraseña desde `~/.pgpass` cuando corresponde.
+
+```sh
+cmake -S . -B build
+cmake --build build --parallel
+```
 
