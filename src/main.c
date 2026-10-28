@@ -1,16 +1,31 @@
 #include <stdio.h>
 #include <db.h>
 #include <stdlib.h>
+#include <server.h>
+
 
 int main(void)
 {
-    printf("Hello world! \n");
-    PGconn *conn = dbConnect();
-    if (conn == NULL) {
-        printf("Error de conexión\n");
+    int sockfd;
+    PGconn *conn;
+
+    sockfd = create_socket(PORT);
+    if (sockfd == -1)
+    {
         return EXIT_FAILURE;
     }
-    printf("Conexión exitosa\n");
+
+    conn = dbConnect();
+    if (conn == NULL)
+    {
+        close(sockfd);
+        return EXIT_FAILURE;
+    }
+
+    run_server(sockfd);
+
     PQfinish(conn);
+    close(sockfd);
+
     return EXIT_SUCCESS;
 }

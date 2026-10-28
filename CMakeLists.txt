@@ -25,6 +25,7 @@ target_sources(VetLibrary
         src/modules/inventario.c
         src/modules/fichaMedica.c
         src/modules/receta.c
+        src/http/server.c
     
     PUBLIC 
         FILE_SET HEADERS
