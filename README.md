@@ -12,20 +12,17 @@
 # Stack:
 - C Language 202311L (23) 
 - GCC Compiler 16.2.1
-- PostgreSQL
+- PostgreSQL/libpq
 - CMake
 - Argon2
-- libpq
 
-El proyecto contiene los módulos de acceso a datos y autenticación como una
-biblioteca C. No incluye una interfaz de terminal ni un servidor HTTP.
+El proyecto contiene los módulos de acceso a datos y un servidor con Socket TCP configurado para recibir métodos HTTP. `Si tienes alguna consulta respecto a esto, puedes leer el Beej's Network Programming Guide y el manual de POSIX Programmer's Manual disponible en Linux, ten en cuenta que las conexiones del socket son diferentes para Windows y Mac.`
 
-La conexión PostgreSQL usa la configuración estándar de libpq. Puedes definir
-el host, usuario y base de datos mediante las variables `PGHOST`, `PGUSER` y
-`PGDATABASE`; libpq lee la contraseña desde `~/.pgpass` cuando corresponde.
+La conexión PostgreSQL usa la configuración estándar de libpq. `Leer la documentación oficia de PostgreSQL 18 si tienes alguna consulta al respecto.`
 
 ```sh
-cmake -S . -B build
-cmake --build build --parallel
+cmake -B build
+cmake --build build
+./build/VetFlux
 ```
 
