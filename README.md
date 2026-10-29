@@ -16,9 +16,9 @@
 - CMake
 - Argon2
 
-El proyecto contiene los módulos de acceso a datos y un servidor con Socket TCP configurado para recibir métodos HTTP. **Si tienes alguna consulta respecto a esto, puedes leer el [Beej's Network Programming Guide](https://beej.us/guide/bgnet/) y el manual de POSIX Programmer's Manual disponible en Linux, ten en cuenta que las conexiones del socket son diferentes para Windows y Mac.**
+El proyecto contiene los módulos de acceso a datos y un servidor con Socket TCP configurado para recibir métodos HTTP. *Si tienes alguna consulta respecto a esto, puedes leer el [Beej's Network Programming Guide](https://beej.us/guide/bgnet/) y el manual de POSIX Programmer's Manual disponible en Linux, ten en cuenta que las conexiones del socket son diferentes para Windows y Mac.*
 
-La conexión PostgreSQL usa la configuración estándar de libpq. `Leer la documentación oficial de PostgreSQL 18 si tienes alguna consulta al respecto.`
+La conexión PostgreSQL usa la configuración estándar de libpq. *Leer la [documentación oficial de PostgreSQL 18](https://www.postgresql.org/docs/18/index.html) si tienes alguna consulta al respecto.*
 
 ```sh
 cmake -B build
