@@ -26,6 +26,7 @@ target_sources(VetLibrary
         src/modules/fichaMedica.c
         src/modules/receta.c
         src/http/server.c
+        src/http/http.c
     
     PUBLIC 
         FILE_SET HEADERS
@@ -42,4 +43,5 @@ target_sources(VetLibrary
             include/fichaMedica.h
             include/receta.h
             include/server.h
+            include/http.h
     )

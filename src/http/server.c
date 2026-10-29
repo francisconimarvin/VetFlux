@@ -1,4 +1,16 @@
 #include <server.h>
+#include <http.h>
+
+#include <unistd.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <string.h>
+
 
 // Child handler
 void sigchld_handler(int s)
@@ -180,16 +192,20 @@ void run_server(int sockfd)
         {
             close(sockfd);
 
-            if (send(new_fd, "Estás conectado a VetFlux.", 28, 0) == -1)
-            {
-                perror("send");
-            }
+            handle_http_request(new_fd);
+
+            const char *response =
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/plain; charset=utf-8\r\n"
+                "Content-Length: 30\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+                "Estás conectado a VetFlux.\r\n";
+
+            send(new_fd, response, strlen(response), 0);
 
             close(new_fd);
             _exit(EXIT_SUCCESS);
         }
-
-        close(new_fd);
     }
 }
-

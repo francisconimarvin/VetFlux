@@ -2,7 +2,8 @@
 #include <db.h>
 #include <stdlib.h>
 #include <server.h>
-
+#include <signal.h>
+#include <unistd.h>
 
 int main(void)
 {
